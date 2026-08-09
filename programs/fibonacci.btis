@@ -1,0 +1,54 @@
+; fibonacci.btis
+;
+; Compute Fibonacci F(0)..F(N) mod 27 and emit them.
+
+; --- main ---
+loadc 0
+mov_cd 0            ; D0 := 0   -- a = F(0)
+
+loadc 1
+mov_cd 1            ; D1 := 1   -- b = F(1)
+
+mov_dc 0
+outc                ; emit F(0)
+
+call fib_step
+call fib_step
+call fib_step
+call fib_step
+call fib_step
+call fib_step
+call fib_step
+call fib_step
+call fib_step
+
+halt
+
+; --- fib_step ---
+; Pre:  D0 = F(i), D1 = F(i+1)
+; Post: D0 = F(i+1), D1 = F(i+2) = F(i) + F(i+1). Emits F(i+1).
+label fib_step
+; D2 := b  (preserve b while we work on a)
+mov_dc 1
+mov_cd 2
+
+; C := a, store mem[a] := b
+mov_dc 0
+store_d 2
+
+; C := a, cube_add: C := a + b
+mov_dc 0
+cube_add
+
+; D1 := C (= a + b = new b)
+mov_cd 1
+
+; D0 := D2 (= old b = new a)
+mov_dc 2
+mov_cd 0
+
+; emit F(i+1)
+mov_dc 0
+outc
+
+ret

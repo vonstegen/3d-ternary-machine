@@ -33,6 +33,13 @@ pub mod opcodes {
     pub const OUTV: u8 = 4;         // emit C
     pub const MOV_R: u8 = 5;        // R[dst] := R[src]  (arg = dst, target = src)
     pub const LOAD_R: u8 = 6;       // R[arg] := Perm::identity()
+    // D0..D3 are cube-valued data registers (general-purpose scratch).
+    // Without them, BT-IS cannot hold two cubes at once, which makes
+    // binary operations (a+b, swap, comparison) awkward.
+    pub const MOV_CD: u8 = 7;        // D[arg] := C
+    pub const MOV_DC: u8 = 8;        // C := D[arg]
+    pub const STORE_D: u8 = 9;       // mem[C] := D[arg]
+    pub const LOAD_D: u8 = 10;       // D[arg] := mem[C]
 
     // 32..56 : rotations applied to C
     pub const ROT_Z_90:  u8 = 32;
@@ -58,6 +65,17 @@ pub mod opcodes {
     pub const IADD: u8 = 64;
     pub const ISUB: u8 = 65;
     pub const IMUL: u8 = 66;
+    // CYCLE_X / CYCLE_Y / CYCLE_Z step a single coordinate through
+    // {-1, 0, +1} -> {+1, 0, -1} without saturation, treating the
+    // coordinate as a cyclic Z/3 counter. Useful for cube-modular
+    // arithmetic that IADD's saturation would block.
+    pub const CYCLE_X: u8 = 67;
+    pub const CYCLE_Y: u8 = 68;
+    pub const CYCLE_Z: u8 = 69;
+    // CUBE_ADD: C := C + mem[C]  (full 27-state addition mod 27,
+    // coordinate-wise with carry). Required for arithmetic on cube
+    // values beyond {-1, 0, +1}.
+    pub const CUBE_ADD: u8 = 70;
 
     // 96..128 : comparison, three-way branching
     pub const CMP:     u8 = 96;
@@ -81,3 +99,6 @@ pub mod opcodes {
 
 /// Number of rotor registers available to programs.
 pub const ROTOR_COUNT: usize = 8;
+
+/// Number of cube-valued data registers (D0..D3).
+pub const DATA_REG_COUNT: usize = 4;

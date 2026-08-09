@@ -19,7 +19,7 @@
 //! their pre-run state. `output` is *not* undone (it's a side effect).
 
 use crate::cube::Cube;
-use crate::isa::{opcodes, ROTOR_COUNT};
+use crate::isa::{opcodes, ROTOR_COUNT, DATA_REG_COUNT};
 use crate::symmetry::Perm;
 use std::collections::HashMap;
 
@@ -51,6 +51,7 @@ pub enum Emit {
     pub C: Cube,
     pub F: Cube,
     pub R: [Perm; ROTOR_COUNT],
+    pub D: [Cube; DATA_REG_COUNT],
     pub IP: usize,
     pub stack: Vec<usize>,
     pub mem: HashMap<Cube, Cube>,
@@ -87,6 +88,7 @@ enum Undo {
     RestoreC(Cube),
     RestoreF(Cube),
     RestoreR(usize, Perm),
+    RestoreD(usize, Cube),
     MemInsert { addr: Cube, prev: Option<Cube> },
     RestoreStackLen(usize),
 }
@@ -98,6 +100,7 @@ enum Undo {
     pub C: Cube,
     pub F: Cube,
     pub R: [Perm; ROTOR_COUNT],
+    pub D: [Cube; DATA_REG_COUNT],
     pub IP: usize,
     pub stack: Vec<usize>,
     pub mem: HashMap<Cube, Cube>,
@@ -121,6 +124,7 @@ impl VM {
             C: Cube::CENTER,
             F: Cube::CENTER,
             R: [Perm::identity(); ROTOR_COUNT],
+            D: [Cube::CENTER; DATA_REG_COUNT],
             IP: 0,
             stack: vec![],
             mem: HashMap::new(),
@@ -139,6 +143,7 @@ impl VM {
             C: self.C,
             F: self.F,
             R: self.R,
+            D: self.D,
             IP: self.IP,
             stack: self.stack.clone(),
             mem: self.mem.clone(),
@@ -161,6 +166,7 @@ impl VM {
             Undo::RestoreC(c)    => self.C = c,
             Undo::RestoreF(f)    => self.F = f,
             Undo::RestoreR(i, p) => self.R[i] = p,
+            Undo::RestoreD(i, c) => self.D[i] = c,
             Undo::MemInsert { addr, prev } => match prev {
                 Some(p) => { self.mem.insert(addr, p); }
                 None    => { self.mem.remove(&addr); }
@@ -246,6 +252,42 @@ impl VM {
                 self.push_undo(Undo::RestoreR(idx, self.R[idx]));
                 self.R[idx] = Perm::identity();
             }
+            MOV_CD => {
+                let idx = (instr.arg as usize) & 0x3;
+                if idx >= DATA_REG_COUNT {
+                    return Err(VMError::BadRegister(idx as u8));
+                }
+                self.push_undo(Undo::RestoreD(idx, self.D[idx]));
+                self.D[idx] = self.C;
+            }
+            MOV_DC => {
+                let idx = (instr.arg as usize) & 0x3;
+                if idx >= DATA_REG_COUNT {
+                    return Err(VMError::BadRegister(idx as u8));
+                }
+                self.push_undo(Undo::RestoreC(self.C));
+                self.C = self.D[idx];
+            }
+            STORE_D => {
+                let idx = (instr.arg as usize) & 0x3;
+                if idx >= DATA_REG_COUNT {
+                    return Err(VMError::BadRegister(idx as u8));
+                }
+                let addr = self.C;
+                let prev = self.mem.get(&addr).copied();
+                let val = self.D[idx];
+                self.push_undo(Undo::MemInsert { addr, prev });
+                self.mem.insert(addr, val);
+            }
+            LOAD_D => {
+                let idx = (instr.arg as usize) & 0x3;
+                if idx >= DATA_REG_COUNT {
+                    return Err(VMError::BadRegister(idx as u8));
+                }
+                let addr = self.C;
+                self.push_undo(Undo::RestoreD(idx, self.D[idx]));
+                self.D[idx] = self.mem.get(&addr).copied().unwrap_or(Cube::CENTER);
+            }
 
             op if rotation_for(op).is_some() => {
                 self.push_undo(Undo::RestoreC(self.C));
@@ -310,6 +352,29 @@ impl VM {
                 self.push_undo(Undo::RestoreC(self.C));
                 let s = self.C.x() as i16 * instr.arg as i16;
                 self.C = Cube::new(clamp3(s as i8), self.C.y(), self.C.z());
+            }
+            CYCLE_X => {
+                self.push_undo(Undo::RestoreC(self.C));
+                let nx = cycle3(self.C.x());
+                self.C = Cube::new(nx, self.C.y(), self.C.z());
+            }
+            CYCLE_Y => {
+                self.push_undo(Undo::RestoreC(self.C));
+                let ny = cycle3(self.C.y());
+                self.C = Cube::new(self.C.x(), ny, self.C.z());
+            }
+            CYCLE_Z => {
+                self.push_undo(Undo::RestoreC(self.C));
+                let nz = cycle3(self.C.z());
+                self.C = Cube::new(self.C.x(), self.C.y(), nz);
+            }
+            CUBE_ADD => {
+                // C := C + mem[C]  (full 27-state balanced-ternary addition
+                // with carry through x, y, z). If mem[C] is empty, treat
+                // as adding 0 (no-op).
+                self.push_undo(Undo::RestoreC(self.C));
+                let other = self.mem.get(&self.C).copied().unwrap_or(Cube::CENTER);
+                self.C = cube_add(self.C, other);
             }
 
             CMP => {
@@ -386,6 +451,59 @@ impl VM {
 #[inline]
 fn clamp3(v: i8) -> i8 {
     if v < -1 { -1 } else if v > 1 { 1 } else { v }
+}
+
+/// Cycle a coordinate in {-1, 0, +1} forward by one: -1->0->1->-1.
+#[inline]
+fn cycle3(v: i8) -> i8 {
+    match v {
+        -1 => 0,
+         0 => 1,
+         1 => -1,
+         _ => v,
+    }
+}
+
+/// Full 27-state addition: C := a + b coordinate-wise with carry
+/// through (x, y, z). Each coordinate lives in {-1, 0, +1} and carries
+/// overflow to the next.
+fn cube_add(a: Cube, b: Cube) -> Cube {
+    // Sum x + b.x in balanced ternary, producing (digit, carry).
+    let sx = (a.x() as i16) + (b.x() as i16);
+    let (nx, cx) = balanced_trit(sx);
+    // y += b.y + carry from x
+    let sy = (a.y() as i16) + (b.y() as i16) + (cx as i16);
+    let (ny, cy) = balanced_trit(sy);
+    // z += b.z + carry from y
+    let sz = (a.z() as i16) + (b.z() as i16) + (cy as i16);
+    let (nz, cz) = balanced_trit(sz);
+    // Overflow past z is dropped (27-state arithmetic).
+    let _ = cz;
+    Cube::new(nx, ny, nz)
+}
+
+/// Decompose an integer sum in {-3, ..., 3} into a balanced ternary
+/// digit (in {-1, 0, +1}) and a carry (in {-1, 0, +1}).
+///
+/// Truth table for sum -> (digit, carry):
+///   3 -> (0, 1)
+///   2 -> (-1, 1)
+///   1 -> (1, 0)
+///   0 -> (0, 0)
+///  -1 -> (-1, 0)
+///  -2 -> (1, -1)
+///  -3 -> (0, -1)
+fn balanced_trit(sum: i16) -> (i8, i8) {
+    match sum {
+        3  => ( 0,  1),
+        2  => (-1,  1),
+        1  => ( 1,  0),
+        0  => ( 0,  0),
+        -1 => (-1,  0),
+        -2 => ( 1, -1),
+        -3 => ( 0, -1),
+        _  => panic!("balanced_trit: out-of-range sum {}", sum),
+    }
 }
 
 fn rotation_for(op: u8) -> Option<Perm> {
@@ -567,5 +685,53 @@ mod tests {
         ]);
         vm.run().unwrap();
         assert_eq!(vm.output, vec![Emit::Cube(Cube::new(1, 1, 1))]);
+    }
+
+    #[test]
+    fn cycle_x_three_steps_returns_to_start() {
+        let mut vm = prog(vec![
+            Instr { opcode: opcodes::LOADC, arg: 1, target: 0 },
+            Instr { opcode: opcodes::CYCLE_X, arg: 0, target: 0 },  // 1 -> -1
+            Instr { opcode: opcodes::CYCLE_X, arg: 0, target: 0 },  // -1 -> 0
+            Instr { opcode: opcodes::CYCLE_X, arg: 0, target: 0 },  // 0 -> 1
+            Instr { opcode: opcodes::OUTV, arg: 0, target: 0 },
+            Instr { opcode: opcodes::HALT, arg: 0, target: 0 },
+        ]);
+        vm.run().unwrap();
+        assert_eq!(vm.output, vec![Emit::Cube(Cube::new(1, 1, 1))]);
+    }
+
+    #[test]
+    fn cube_add_basic() {
+        // Set mem[(1,0,0)] = (1,0,0), then C := (1,0,0); CUBE_ADD gives
+        // (1,0,0) + (1,0,0) = (2,0,0) in arithmetic, which is balanced-
+        // ternary (-1, +1, 0) with carry. Cube arithmetic drops the
+        // top carry, so the result is (-1, +1, 0).
+        let mut vm = prog(vec![
+            Instr { opcode: opcodes::LOAD_AXIS, arg: 0, target: 0 },   // C = (1,0,0)
+            Instr { opcode: opcodes::STORE_C, arg: 0, target: 0 },     // mem[(1,0,0)] := (1,0,0)
+            Instr { opcode: opcodes::LOAD_AXIS, arg: 0, target: 0 },   // C = (1,0,0)
+            Instr { opcode: opcodes::CUBE_ADD, arg: 0, target: 0 },    // (1,0,0)+(1,0,0)
+            Instr { opcode: opcodes::OUTV, arg: 0, target: 0 },
+            Instr { opcode: opcodes::HALT, arg: 0, target: 0 },
+        ]);
+        vm.run().unwrap();
+        assert_eq!(vm.output, vec![Emit::Cube(Cube::new(-1, 1, 0))]);
+    }
+
+    #[test]
+    fn cube_add_zero_is_identity() {
+        // C = (1,1,1); mem[(1,1,1)] empty (no add); CUBE_ADD should add
+        // (0,0,0) which is identity.
+        let mut vm = prog(vec![
+            Instr { opcode: opcodes::LOADC, arg: 1, target: 0 },
+            Instr { opcode: opcodes::STORE_C, arg: 0, target: 0 },   // sets mem[(1,1,1)]
+            Instr { opcode: opcodes::LOADC, arg: 0, target: 0 },     // C := (0,0,0)
+            Instr { opcode: opcodes::CUBE_ADD, arg: 0, target: 0 },   // 0 + 0 = 0
+            Instr { opcode: opcodes::OUTV, arg: 0, target: 0 },
+            Instr { opcode: opcodes::HALT, arg: 0, target: 0 },
+        ]);
+        vm.run().unwrap();
+        assert_eq!(vm.output, vec![Emit::Cube(Cube::new(0, 0, 0))]);
     }
 }
