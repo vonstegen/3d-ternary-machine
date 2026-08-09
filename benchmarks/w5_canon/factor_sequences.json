@@ -1,0 +1,186 @@
+{
+  "I": [],
+  "Rx90": [
+    "rot_x_90_r"
+  ],
+  "Rx180": [
+    "rot_x_180_r"
+  ],
+  "Rx270": [
+    "rot_x_270_r"
+  ],
+  "Ry90": [
+    "rot_y_90_r"
+  ],
+  "Ry180": [
+    "rot_y_180_r"
+  ],
+  "Ry270": [
+    "rot_y_270_r"
+  ],
+  "Rz90": [
+    "rot_z_90_r"
+  ],
+  "Rz180": [
+    "rot_z_180_r"
+  ],
+  "Rz270": [
+    "rot_z_270_r"
+  ],
+  "Rxy180": [
+    "rot_x_180_r",
+    "rot_z_90_r"
+  ],
+  "Rxmy180": [
+    "rot_x_180_r",
+    "rot_z_270_r"
+  ],
+  "Rxz180": [
+    "rot_x_180_r",
+    "rot_y_270_r"
+  ],
+  "Rxzm180": [
+    "rot_x_180_r",
+    "rot_y_90_r"
+  ],
+  "Ryz180": [
+    "rot_x_90_r",
+    "rot_z_180_r"
+  ],
+  "Ryzm180": [
+    "rot_x_90_r",
+    "rot_y_180_r"
+  ],
+  "R111_120": [
+    "rot_x_90_r",
+    "rot_z_90_r"
+  ],
+  "R111_240": [
+    "rot_x_270_r",
+    "rot_y_270_r"
+  ],
+  "Rm11_120": [
+    "rot_x_90_r",
+    "rot_z_270_r"
+  ],
+  "Rm11_240": [
+    "rot_x_270_r",
+    "rot_y_90_r"
+  ],
+  "R1m1_120": [
+    "rot_x_270_r",
+    "rot_z_270_r"
+  ],
+  "R1m1_240": [
+    "rot_x_90_r",
+    "rot_y_270_r"
+  ],
+  "R11m_120": [
+    "rot_x_270_r",
+    "rot_z_90_r"
+  ],
+  "R11m_240": [
+    "rot_x_90_r",
+    "rot_y_90_r"
+  ],
+  "iI": [
+    "neg_r"
+  ],
+  "iRx90": [
+    "rot_x_90_r",
+    "neg_r"
+  ],
+  "iRx180": [
+    "reflect_x_r"
+  ],
+  "iRx270": [
+    "rot_x_90_r",
+    "reflect_x_r"
+  ],
+  "iRy90": [
+    "rot_y_90_r",
+    "neg_r"
+  ],
+  "iRy180": [
+    "reflect_y_r"
+  ],
+  "iRy270": [
+    "rot_y_90_r",
+    "reflect_y_r"
+  ],
+  "iRz90": [
+    "rot_z_90_r",
+    "neg_r"
+  ],
+  "iRz180": [
+    "reflect_z_r"
+  ],
+  "iRz270": [
+    "rot_z_90_r",
+    "reflect_z_r"
+  ],
+  "iRxy180": [
+    "rot_z_90_r",
+    "reflect_y_r"
+  ],
+  "iRxmy180": [
+    "rot_z_90_r",
+    "reflect_x_r"
+  ],
+  "iRxz180": [
+    "rot_y_90_r",
+    "reflect_x_r"
+  ],
+  "iRxzm180": [
+    "rot_y_90_r",
+    "reflect_z_r"
+  ],
+  "iRyz180": [
+    "rot_x_90_r",
+    "reflect_z_r"
+  ],
+  "iRyzm180": [
+    "rot_x_90_r",
+    "reflect_y_r"
+  ],
+  "iR111_120": [
+    "rot_x_90_r",
+    "rot_z_90_r",
+    "neg_r"
+  ],
+  "iR111_240": [
+    "rot_x_90_r",
+    "rot_y_90_r",
+    "reflect_x_r"
+  ],
+  "iRm11_120": [
+    "rot_x_90_r",
+    "rot_z_90_r",
+    "reflect_z_r"
+  ],
+  "iRm11_240": [
+    "rot_x_90_r",
+    "rot_y_90_r",
+    "reflect_z_r"
+  ],
+  "iR1m1_120": [
+    "rot_x_90_r",
+    "rot_z_90_r",
+    "reflect_x_r"
+  ],
+  "iR1m1_240": [
+    "rot_x_90_r",
+    "rot_y_90_r",
+    "reflect_y_r"
+  ],
+  "iR11m_120": [
+    "rot_x_90_r",
+    "rot_z_90_r",
+    "reflect_y_r"
+  ],
+  "iR11m_240": [
+    "rot_x_90_r",
+    "rot_y_90_r",
+    "neg_r"
+  ]
+}
