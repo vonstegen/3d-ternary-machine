@@ -81,12 +81,18 @@ weakness — the contribution is well-defined and falsifiable.
 - Worked example: a 6-instruction program reversed in one call.
 - Complexity analysis: undo is O(n) per program, O(1) per step.
 
-**Chapter 6 — Turing Completeness (10 pp)**
+**Chapter 6 — Turing completeness (10 pp) — WITHDRAWN**
 
-- Reduction to Minsky's 2-counter machine.
-- Encoding: chain of cubes as a counter, `CYCLE_X` for
-  increment/decrement with carry/borrow.
-- Constructive proof (polynomial blow-up).
+This chapter would have presented the Minsky 2-counter
+reduction. At v0.3.1, the TC claim is withdrawn because
+the proof was unsound (see `docs/turing_completeness.md`).
+Re-deriving the proof requires an unbounded address
+register (a new ISA feature) and a corrected DEC
+algorithm. Out of scope for the current project.
+
+If a future thesis re-establishes TC, this chapter would
+be replaced with the new proof. For now, the chapter is
+left as a placeholder.
 
 **Chapter 7 — Empirical Evaluation (25 pp)**
 

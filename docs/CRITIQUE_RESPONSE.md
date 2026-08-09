@@ -115,17 +115,17 @@ reversal, not as architectural intrinsic reversibility.
 
 ### 3b. "Polynomial-time Turing equivalence"
 
-**Status: imprecise; tighten the wording.**
+**Status: withdrawn at v0.3.1.** The "polynomial blow-up"
+wording was the action item from the original critique, but
+the more fundamental issue is that the underlying TC proof
+is unsound (see `docs/turing_completeness.md` at v0.3.1).
+The proof assumes unbounded cube-keyed memory, which the
+VM does not have. Polynomial-blow-up wording is moot when
+the reduction itself does not hold.
 
-The critique is correct: 2CM-simulates-TM with exponential
-slowdown. We should not let "polynomial" be read as "polynomial
-time." The reduction in `docs/turing_completeness.md` is
-polynomial in *program size* (each 2CM instruction becomes a
-constant number of BT-IS instructions), not in *execution time*.
-
-**Action:** rewrite the relevant paragraph to say "polynomial
-in program size" or "polynomial *blow-up* in instruction count,
-but execution-time equivalence is not claimed."
+The earlier "polynomial in program size" action item is
+retained here for the historical record but is no longer
+the relevant fix.
 
 ### 3c. VSA "special case at dimension 3" — misclassified
 
@@ -250,7 +250,9 @@ In priority order:
 5. **Make polycube/voxel canonicalization the flagship workload.**
    Replace or supplement 3D GoL.
 6. **Tighten wording** on "polynomial" in turing_completeness.md
-   to specify "polynomial in program size."
+   to specify "polynomial in program size." *(Superseded at
+   v0.3.1: the entire TC proof was withdrawn, not just the
+   polynomial wording. See `docs/turing_completeness.md`.)*
 
 These are not all the same urgency. Items 1, 2, and 6 are
 honesty fixes (don't claim things that aren't true). Items 3, 4,

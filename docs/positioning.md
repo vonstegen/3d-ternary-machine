@@ -294,9 +294,11 @@ The full response is in `docs/CRITIQUE_RESPONSE.md`. Summary:
   is incidental; the group is the substance.
 - **VSA framing**: removed. d=3 is not "VSA in 3 dimensions";
   VSA's properties require high dimension.
-- **Polynomial claim** (Turing-completeness): the reduction is
-  polynomial in *program size*, not in *execution time*.
-  2CM-simulates-TM has exponential slowdown.
+- **Turing-completeness claim** (withdrawn at v0.3.1): the
+  proof in `docs/turing_completeness.md` was unsound. The
+  encoding required unbounded cube-keyed memory that the VM
+  does not have (only 27 keys), and the DEC algorithm was
+  incorrect. See the v0.3.1 rewrite of that file.
 - **SCALAR baseline** (Stage B): the original was per-coord
   with explicit carries. Replaced with a word-width ALU
   (`WADD cd1, cd2` in one instruction), which is what REBEL

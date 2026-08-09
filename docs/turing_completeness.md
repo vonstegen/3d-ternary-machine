@@ -1,167 +1,158 @@
 # Turing completeness of BT-IS
 
-> A rigorous argument that the BT-IS architecture (cube + ISA + VM)
-> is Turing-complete. The argument reduces from a 2-counter machine
-> (Minsky 1967) which is known to be Turing-complete.
+> **Status at v0.3.1: claim withdrawn.** The proof that
+> previously appeared in this document is unsound. The
+> archive of the broken proof is preserved below as a
+> historical record. Re-deriving the proof is out of
+> scope for v0.3.1.
 
-## 1. Statement
+## 1. Why the previous proof is unsound
 
-**Claim.** BT-IS as specified in `docs/ISA.md` and implemented in
-`src/` can simulate any 2-counter machine.
+The previous proof (`docs/turing_completeness.md` at
+v0.2.0-niche and v0.3.0-negative) attempted to reduce
+BT-IS to Minsky's 2-counter machine by encoding each
+counter as a chain of cubes in `HashMap<Cube, Cube>`-
+keyed memory. Two distinct errors invalidated the proof.
 
-**Corollary.** BT-IS is Turing-complete.
+**Error 1 — bounded address space.** The proof
+represented each counter as a chain of cubes, one cube
+per balanced-ternary digit, stored at addresses
+`mem[k_c]`, `mem[k_c + 1]`, ... where `k_c` is itself a
+cube. The `HashMap<Cube, Cube>` has keys drawn from
+`{-1, 0, +1}^3` — 27 distinct keys. Therefore:
 
-The argument assumes the current ISA (including the extensions added
-in commit `9626aff` for cube arithmetic and data registers). Earlier
-versions of the ISA — without `D` registers and `CUBE_ADD` — were
-*not* Turing-complete in any meaningful sense (they could not hold
-two cubes simultaneously, so binary operations required a serialised
-workaround that does not fit the standard completeness criteria).
+- A counter can be represented as a chain of at most
+  ~27 cubes before the address space runs out.
+- A 2-counter machine with counter values exceeding
+  `3^27` cannot be simulated.
+- The "unbounded memory" caveat in §5 of the previous
+  proof (line 119-124) was incorrect: `HashMap<Cube,
+  Cube>` is finite in cardinality, not just "finite in
+  practice." Minsky machines with unbounded counter
+  values cannot be simulated.
 
-## 2. The 2-counter machine
+The proof as written only established Turing-completeness
+for 2-counter machines whose counter values stay bounded
+by `3^27`. That's a finite-state machine, not a
+Turing-complete one.
 
-A 2-counter machine (Minsky 1967, *Computation: Finite and Infinite
-Machines*) has:
+**Error 2 — wrong DEC algorithm.** The proof's DEC
+algorithm (§3.2) was: "walk to the most-significant
+non-zero digit, decrement it, propagate borrow." This is
+not balanced-ternary subtraction. Concrete counterexample:
 
-- A finite program: a list of instructions, each of one of these forms:
-  - `INC(c, k)`: increment counter `c` and go to instruction `k`.
-  - `DEC(c, k_zero, k_nonzero)`: if counter `c` is 0, go to `k_zero`;
-    else decrement `c` and go to `k_nonzero`.
-  - `HALT`: stop.
-- Two counters, each holding a non-negative integer.
-- An instruction pointer.
+- Counter value `2` encoded as `mem[k_c].x = -1,
+  mem[k_c + 1].x = +1` (representing `1·(-1) + 3·(+1) = 2`).
+- DEC walks to the most-significant non-zero: `+1` at
+  `mem[k_c + 1]`.
+- Decrement `+1` → `0` with no borrow (since `0` is
+  in `{-1, 0, +1}`).
+- Result: `mem[k_c].x = -1, mem[k_c + 1].x = 0`,
+  representing `-1` — but the correct result of `2 - 1`
+  is `+1`, not `-1`.
 
-Minsky proved that the 2-counter machine is Turing-complete. Any
-Turing machine can be simulated by a sufficiently large 2-counter
-program.
+The correct DEC algorithm is LSD-walk with borrow:
+decrement the least-significant non-zero digit, propagate
+borrow to the next digit only if the LSD wrapped from
+`-1` to `+1` (rather than from `0` to `-1`). The previous
+proof did not describe this algorithm.
 
-## 3. BT-IS as a 2-counter machine
+## 2. What the architecture actually is
 
-We map the 2-counter machine's components to BT-IS state:
+The v0.3.1 implementation supports:
 
-| 2-counter component | BT-IS representation                          |
-|---------------------|------------------------------------------------|
-| Counter `c` value   | A *chain* of cubes in `mem`, one cube per trit  |
-| Counter `c`         | Address of the chain (cube `k_c`)               |
-| Instruction pointer | The BT-IS `IP` (already provided by ISA)       |
-| Program memory      | A static block of BT-IS instructions           |
+- A finite 27-state cube register `C` (per
+  `src/cube.rs:N = 27`).
+- 8 rotor registers `R[0..7]`, each holding a 27-entry
+  permutation table.
+- 4 cube data registers `D[0..3]`.
+- A `HashMap<Cube, Cube>`-keyed memory with at most 27
+  distinct keys.
+- An instruction set of ~50 opcodes (rotations,
+  reflections, arithmetic, comparison, branches, memory,
+  control).
 
-The non-trivial mapping is the counter. A 2-counter counter holds
-a non-negative integer; we encode it as a chain of cubes in BT-IS
-memory where each cube's `.x` is one balanced-ternary digit. The
-chain's least-significant digit lives at `mem[k_c]`, the next at
-`mem[k_c + 1]`, and so on, with `.x ∈ {-1, 0, +1}` representing
-the digit. The integer is `Σ digit_i · 3^i` (with sign carried by
-the digits directly).
+This is a finite-state machine with bounded memory
+(cardinality at most `27^N` for some `N` dependent on
+how the registers and memory are used). It is **not**
+Turing-complete as specified at v0.3.1.
 
-The *address* of a counter — its `k_c` — is itself a cube. Since
-BT-IS cubes have 27 possible values, there are 27 distinct
-counters that can co-exist (plus an unbounded number of additional
-counters whose addresses are stored in other counters).
+## 3. What would be required to establish TC
 
-### 3.1 `INC(c, k)`
+To make BT-IS Turing-complete, two changes are needed:
 
-To increment counter `c`:
+**Change A — unbounded address space.** Add a new
+address type `A ∈ ℕ` (or an unbounded balanced-ternary
+address word) and three-operand register-memory ops:
 
-1. Walk the chain from `k_c` upward until a digit != +1 (or run out).
-2. Increment that digit by 1 (using `CYCLE_X` to step without
-   saturation; -1 → 0 → +1 → -1 wraps mod 3).
-3. If a digit wrapped from +1 back to -1, propagate the carry to the
-   next cube; repeat.
+```
+ALOAD  Rdst, [A]      ; C := mem[A]
+ASTORE [A], Rsrc       ; mem[A] := C
+AINC   [A]             ; A := A + 1
+ADEC   [A]             ; A := A - 1
+```
 
-This is balanced-ternary increment with carry.
+Cube values continue to live in `mem[C]` (cube-keyed),
+but address generation is unbounded. The two memory
+spaces are independent.
 
-### 3.2 `DEC(c, k_zero, k_nonzero)`
+**Change B — correct DEC algorithm.** Replace the
+proof's MSD-decrement with LSD-walk-with-borrow. The
+correct algorithm is:
 
-To decrement counter `c`:
+```
+DEC(c, k_zero, k_nonzero):
+  # Walk from k_c toward higher indices.
+  # At each step, if mem[curr].x is not 0, decrement
+  # it. If it wrapped from -1 to +1, propagate borrow
+  # to the next cube (CYCLE_X in reverse). If no borrow
+  # propagates, stop.
+  # If the entire chain is zero, branch to k_zero.
+  # Else, branch to k_nonzero.
+```
 
-1. Walk the chain from `k_c` upward to find the most-significant
-   nonzero digit.
-2. Decrement that digit by 1 (using `CYCLE_X` in reverse).
-3. If a digit wrapped from -1 back to +1, propagate the borrow.
+With these two changes, the Minsky reduction is sound.
+The proof sketch in §3-4 of the previous version
+(`docs/turing_completeness.md` git history at v0.2.0-
+niche and earlier) is otherwise structurally correct —
+the encoding, the INC algorithm, the 3-way branch all
+work. The two errors above are local to the address
+space and the DEC step.
 
-If the counter is zero (every digit is 0), branch to `k_zero`; else
-branch to `k_nonzero` after decrementing.
+## 4. What's stored here
 
-### 3.3 The 3-way branch
+For reference, the previous (broken) proof is preserved
+in the git history of `docs/turing_completeness.md`. The
+last commit that contained it is in the v0.3.0-negative
+tag. The proof is also available in the v0.2.0-niche tag.
 
-The BT-IS `CMP` + `BR_ZERO` pair is sufficient to dispatch on
-"counter is zero" / "counter is nonzero". (For a 2-counter machine
-the third branch is never needed.)
+To see the broken proof:
 
-## 4. Reduction
+```bash
+git show v0.2.0-niche:docs/turing_completeness.md
+git show v0.3.0-negative:docs/turing_completeness.md
+```
 
-For every 2-counter machine `M` with `n` instructions and counters
-`a, b`:
+The proof is left in git history (not deleted) because
+the errors are part of the project's research record and
+removing them would obscure what was tried. The current
+file marks the claim as withdrawn.
 
-1. Encode `M`'s instructions as a static BT-IS program. Each
-   instruction becomes a fixed sequence of BT-IS instructions
-   (chain walks, `CYCLE_X` increments/decrements, cube-compare,
-   branch).
-2. Encode `M`'s counters as two cubes-in-memory chains at
-   predetermined addresses.
-3. Run the BT-IS program. The simulation is correct because:
-   - The chain walking is finite (terminates when it hits a 0 digit
-     in the highest non-zero position, or a sentinel cube beyond
-     the chain's high end).
-   - The increment/decrement with carry/borrow preserves the
-     balanced-ternary representation.
-   - The branch on zero/nonzero is exact.
+## 5. Practical implications
 
-**Bounded resources.** The chain's high end grows by at most one
-cube per `INC` carry. We pre-allocate a bounded region of memory
-(e.g., 100 cubes per counter) and bound the simulation to inputs
-that fit in that region. Beyond that bound, the simulation
-allocates more cubes via `STORE` to fresh addresses.
+At v0.3.1:
 
-## 5. Caveats and limits
-
-1. **Bounded memory.** The current BT-IS memory is `HashMap<Cube,
-   Cube>`, which is unbounded in principle but finite in any
-   practical run. The 2-counter simulation requires unbounded
-   memory in the worst case (Minsky machines with unbounded
-   counter values); in practice we run with a `max_steps` limit
-   on the VM.
-
-2. **The argument is constructive.** The reduction is explicit:
-   given any 2-counter program, we can write a (potentially very
-   long) BT-IS program that simulates it. The size blow-up is
-   polynomial — each 2-counter instruction becomes a fixed
-   number of BT-IS instructions (a constant plus the length of
-   the cube chain walk, which is O(log c)).
-
-3. **Reversibility.** A consequence of the construction is that
-   *every* BT-IS program is reversible: the 2-counter machine is
-   not reversible in general, but BT-IS's per-step undo log
-   (`vm.undo_all()`) means any BT-IS execution can be undone. This
-   is a stronger property than Turing-completeness per se.
-
-## 6. What this proves and does not prove
-
-This proves:
-
-- BT-IS can express any computable function (modulo the standard
-  caveats about finite memory).
-- BT-IS has at least the computational power of any existing
-  balanced-ternary ISA (REBEL, Setnex).
-- The geometric primitives (cube, CYCLE_X, CUBE_ADD, three-way
-  branch) are computationally sufficient.
-
-This does *not* prove:
-
-- That BT-IS is *efficient* relative to a scalar baseline. Stage B
-  measures that.
-- That native hardware implementations can match the abstract
-  machine's power. Stage D measures that.
-- That the architecture is a good fit for *specific* workloads.
-  Stage E measures that.
-
-## 7. Prior reductions used
-
-- Minsky 1967: 2-counter machines are Turing-complete.
-- Schützenberger 1963: counter machines are equivalent to pushdown
-  automata and Turing machines.
-- Shepherdson & Sturgis 1963: register machines with indirect
-  addressing are Turing-complete.
-
-We use Minsky's 2-counter machine as the cleanest known reference.
+- The architecture is a clean reference implementation
+  of a balanced-ternary cube machine. It runs the
+  workloads in `programs/`, all the unit tests, and the
+  Python cross-check.
+- It is *not* Turing-complete. The "TC proved" claim
+  in the v0.2.0-niche verdict was incorrect.
+- The "intrinsic reversibility of the rotation /
+  reflection subset" claim is unaffected and remains
+  true: each of the 12 named geometric ops is a group
+  element with an inverse in $O_h$.
+- The "journal-based reversibility via `vm.undo_all()`"
+  claim is also unaffected: the undo log is a Bennett
+  history tape that works for any register VM, including
+  this one.
