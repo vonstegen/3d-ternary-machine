@@ -25,10 +25,14 @@ undone); `C` is back to its initial value.
 
 1. **Per-step undo is constant-time.** Each `Undo` entry is a
    small enum variant; pushing and popping them is O(1).
-2. **Reversibility is automatic**, not a programmer opt-in.
-   Every BT-IS program is reversible by construction — including
-   programs that use `CALL`/`RET` (whose stack manipulation is
-   recorded in `Undo::RestoreStackLen`).
+2. **Reversibility is journal-based** (Bennett-style), not
+   intrinsic. Every BT-IS program *can* be reversed via
+   `vm.undo_all()`, but the same mechanism works for any machine
+   -- it does not distinguish BT-IS from SCALAR. The
+   *intrinsic* reversibility holds only for the rotation/
+   reflection subset, where each op is a group element with an
+   inverse. Programs using `CALL`/`RET` are reversed via the
+   `Undo::RestoreStackLen` log entries.
 3. **The undo log grows linearly** with instruction count. For
    long-running programs this is O(n) memory. The VM does not
    currently support commit/rollback regions; this is a
