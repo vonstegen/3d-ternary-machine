@@ -1,27 +1,63 @@
 ; w4_cubeadd.btis — W4: pure cube-add loop.
 ;
-; Repeatedly cube_add the same cube to itself, N times. This is
-; the workload where BT-IS's single-op cube-add should win most
-; clearly.
+; Repeatedly cube-add C to itself, N=10 times. Starting
+; from C = (1,1,1), compute C := C + C and emit the
+; final cube.
+;
+; The BT-IS cube_add op computes C := C + mem[C]. To get
+; C := C + C without an extra operand, we keep the
+; running C in D0, store it to mem[C], then cube_add,
+; then refresh D0 from the new C. That is the minimum
+; setup cost for the cube-add primitive when the
+; operand is the previous C.
+;
+; Mirrors benchmarks/w4_word_scalar.py, which does the
+; same 10 iterations of C := C + C starting from (1,1,1).
+;
+; stage_b_word.py asserts the BT-IS and SCALAR outputs
+; match before reporting an instruction-count ratio.
 
-; Set up: mem[(1,1,1)] := (1,1,1); C := (1,1,1).
-; Each iteration: cube_add -> C := C + mem[C] = C + C = 2*C.
+loadc 1             ; C = (1,1,1)
+mov_cd 0            ; D0 = (1,1,1) (operand for cube_add)
 
-loadc 1
-store_c             ; mem[(1,1,1)] := (1,1,1)
-loadc 1             ; C := (1,1,1)
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
 
-; Loop N=10 times. We unroll.
-label loop
-cube_add
-cube_add
-cube_add
-cube_add
-cube_add
-cube_add
-cube_add
-cube_add
-cube_add
-cube_add
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+mov_cd 0       ; D0 := C (refresh operand)
+
+store_d 0      ; mem[C] := D0
+cube_add       ; C := C + mem[C] = C + D0
+
 outc
 halt
