@@ -78,6 +78,9 @@ ROT_Y_90  = build_perm(lambda x, y, z: (z, y, -x))
 ROT_Y_180 = build_perm(lambda x, y, z: (-x, y, -z))
 ROT_Y_270 = build_perm(lambda x, y, z: (-z, y, x))
 NEG       = build_perm(lambda x, y, z: (-x, -y, -z))
+REFLECT_X = build_perm(lambda x, y, z: (-x, y, z))
+REFLECT_Y = build_perm(lambda x, y, z: (x, -y, z))
+REFLECT_Z = build_perm(lambda x, y, z: (x, y, -z))
 
 
 class VM:
