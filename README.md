@@ -33,13 +33,15 @@ cargo run -- programs/countdown.btis   # BT-IS CLI demo
 cargo run --bin btis_bench --release 1000000   # ~90 M instructions/sec
 ```
 
-Cross-verification (Rust ↔ Python cube):
+| `benchmarks/` | Throughput comparison vs scalar balanced-ternary reference        |
 
-```bash
-cargo run --bin btis_dump_tables --release
-python3 benchmarks/verify.py
-```
+## Roadmap
 
+A staged plan to determine whether this architecture is *useful*,
+with falsifiable predictions and explicit exit criteria for each
+stage. See [`ROADMAP.md`](./ROADMAP.md) for the full plan.
+
+ ## Quick start
 ## What the project demonstrates
 
 - A 27-state cube with the right symmetry structure: 1 + 6 + 12 + 8 = 27,
