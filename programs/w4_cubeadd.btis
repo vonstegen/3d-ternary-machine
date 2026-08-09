@@ -1,0 +1,27 @@
+; w4_cubeadd.btis — W4: pure cube-add loop.
+;
+; Repeatedly cube_add the same cube to itself, N times. This is
+; the workload where BT-IS's single-op cube-add should win most
+; clearly.
+
+; Set up: mem[(1,1,1)] := (1,1,1); C := (1,1,1).
+; Each iteration: cube_add -> C := C + mem[C] = C + C = 2*C.
+
+loadc 1
+store_c             ; mem[(1,1,1)] := (1,1,1)
+loadc 1             ; C := (1,1,1)
+
+; Loop N=10 times. We unroll.
+label loop
+cube_add
+cube_add
+cube_add
+cube_add
+cube_add
+cube_add
+cube_add
+cube_add
+cube_add
+cube_add
+outc
+halt

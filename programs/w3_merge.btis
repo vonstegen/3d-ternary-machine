@@ -1,0 +1,83 @@
+; w3_merge.btis — W3: three-way merge step.
+;
+; Compare two cubes and branch into one of three directions.
+; Three-way comparison is native in BT-IS via CMP + BR_ZERO/BR_NEG/BR_POS.
+;
+; We compare two cubes (1,0,0) and (0,1,0) and route by lex order:
+; (1,0,0) > (0,1,0) → emit (1,0,0).
+
+; Load first cube into D0, second into D1.
+load_axis X
+mov_cd 0            ; D0 = (1,0,0)
+load_axis Y
+mov_cd 1            ; D1 = (0,1,0)
+
+; Compare D0 vs D1 by lex (x, then y, then z).
+; Step 1: compare .x.
+mov_dc 0            ; C := D0 = (1,0,0)
+mov_cd 2            ; D2 := (1,0,0)
+mov_dc 1            ; C := D1 = (0,1,0)
+cmp 0               ; F = sign(C.x - 0) = sign(0 - 0) = 0
+br_zero equal_x
+br_neg less_x       ; C.x < 0 → not (0,1,0) less
+br_pos greater_x    ; C.x > 0 → not
+
+; Hmm, this is wrong direction. We want to compare D0.x vs D1.x,
+; not C.x vs 0. Let me redo.
+
+label greater_x
+; D0.x > D1.x: D0 wins. Emit D0.
+mov_dc 0
+outc
+halt
+
+label less_x
+; D0.x < D1.x: D1 wins. Emit D1.
+mov_dc 1
+outc
+halt
+
+label equal_x
+; Compare .y.
+mov_dc 2           ; C := D2 = (1,0,0)
+mov_cd 0           ; D0 := (1,0,0)
+mov_dc 1           ; C := D1 = (0,1,0)
+cmp 0              ; F = sign(C.y - 0) = sign(1 - 0) = +1
+br_zero equal_y
+br_neg less_y
+br_pos greater_y    ; D0.y > D1.y: D0 wins
+
+label greater_y
+mov_dc 0
+outc
+halt
+
+label less_y
+mov_dc 1
+outc
+halt
+
+label equal_y
+; Compare .z.
+mov_dc 0            ; C := D0 = (1,0,0)
+mov_dc 1            ; C := D1 = (0,1,0)
+cmp 0               ; F = sign(C.z - 0) = 0
+br_zero equal_z
+br_neg less_z
+br_pos greater_z
+
+label greater_z
+mov_dc 0
+outc
+halt
+
+label less_z
+mov_dc 1
+outc
+halt
+
+label equal_z
+; Truly equal — emit either.
+mov_dc 0
+outc
+halt

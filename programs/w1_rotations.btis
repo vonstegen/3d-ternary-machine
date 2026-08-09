@@ -1,0 +1,16 @@
+; w1_rotations.btis — W1: 3D rotation sequence.
+;
+; Apply 8 rotations in a fixed sequence; emit the final cube.
+; This is a discriminator-free workload (pure LUT lookups) but it
+; serves as a baseline for the other workloads.
+
+load_axis X             ; C = (1,0,0)
+rot_z_90
+rot_x_90
+rot_y_180
+rot_z_270
+rot_x_180
+reflect_x
+neg
+outc
+halt

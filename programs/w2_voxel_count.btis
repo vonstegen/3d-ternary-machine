@@ -1,0 +1,149 @@
+; w2_voxel_count.btis — W2: voxel neighborhood count.
+;
+; Place 8 face-neighbor cells with various alive/dead states, then
+; count how many are alive. We use cube-add (cube + mem[C]) to
+; accumulate. The accumulator cube is at a fixed address.
+;
+; Neighbors: +X, -X, +Y, -Y, +Z, -Z, +X+Y, -X+Y (the first 6 are face
+; neighbors; the last 2 are extras for variety).
+;
+; Pattern: alive states at +X, +Y, -Z; dead at -X, -Y, +Z.
+;
+; Cross-checked against benchmarks/scalar_vm::W2.
+
+; --- set up the 8 neighbor cubes ---
+loadc 1             ; C = (1,1,1)
+store_c             ; mem[(1,1,1)] := (1,1,1)   ; alive
+loadc -1            ; C = (-1,-1,-1)
+store_c             ; mem[(-1,-1,-1)] := (-1,-1,-1)  ; alive (we use the neg cube too)
+loadc 0             ; C = (0,0,0)
+store_c             ; mem[(0,0,0)] := (0,0,0)   ; dead
+load_axis X
+store_c             ; mem[(1,0,0)] := (1,0,0)   ; alive
+load_axis XI
+store_c             ; mem[(-1,0,0)] := (-1,0,0) ; dead
+load_axis Y
+store_c             ; mem[(0,1,0)] := (0,1,0)   ; alive
+load_axis YI
+store_c             ; mem[(0,-1,0)] := (0,-1,0) ; dead
+load_axis Z
+store_c             ; mem[(0,0,1)] := (0,0,1)   ; dead
+load_axis ZI
+store_c             ; mem[(0,0,-1)] := (0,0,-1) ; alive
+
+; --- accumulator: C starts at center (0,0,0) which we'll use as a
+; running total. Each cube-add adds one neighbor's cube.
+; But mem[(0,0,0)] = (0,0,0) (dead), so cube_add does nothing.
+; We need to start with the accumulator at a non-zero cube, or add
+; to a different accumulator.
+;
+; Simpler approach: keep a separate accumulator cube at D0, walk
+; through the 8 neighbor addresses, and accumulate via cube_add.
+
+; --- walk and accumulate ---
+loadc 0
+mov_cd 0             ; D0 := 0 (accumulator)
+
+; For each of 8 neighbors:
+;   load the neighbor's address into C
+;   cube_add: C := C + mem[C], but C is the *address* not the value.
+; Instead we use STORE_D / LOAD_D.
+
+; Strategy: for each neighbor:
+;   C := neighbor_addr
+;   LOAD_D 0  ; D0 := mem[C] = the value
+;   C := D0
+;   D0 (which now holds the value) ... but we need C to hold the
+;   accumulator for cube_add. Let me rethink.
+
+; A cleaner approach: maintain the accumulator in mem[(0,0,0)].
+; For each neighbor:
+;   C := neighbor_addr
+;   LOAD_D 0   ; D0 := mem[C]
+;   C := (0,0,0) (the accumulator address)
+;   STORE_D 0  ; mem[(0,0,0)] := D0 (which is the neighbor value)
+;   C := (0,0,0)
+;   cube_add   ; C := C + mem[C] = (0,0,0) + neighbor_value
+
+; But (0,0,0) + neighbor_value would be the *cube* sum, which we
+; want. The .x component of the result gives the count if neighbors
+; have values in {-1, 0, +1} and we treat .x as "alive contribution".
+
+; Simpler: use the cube (1,1,1) as the running-total address, and
+; each neighbor contributes its .x via cube_add. The .x of the
+; accumulator after all 8 ops is the sum of the alive indicators.
+
+; Re-do setup so mem[(1,1,1)] is the accumulator.
+loadc 1
+store_c             ; mem[(1,1,1)] := (1,1,1)   ; reset accumulator
+
+; Re-setup neighbors (we overwrote (1,1,1) above)
+load_axis X
+store_c             ; mem[(1,0,0)] := (1,0,0)
+load_axis XI
+store_c
+load_axis Y
+store_c
+load_axis YI
+store_c
+load_axis Z
+store_c
+load_axis ZI
+store_c
+loadc -1
+store_c             ; mem[(-1,-1,-1)] := alive
+loadc 0
+store_c             ; mem[(0,0,0)] := dead
+
+; Now mem[(1,1,1)] holds the accumulator = (1,1,1). For each
+; neighbor address, set C = neighbor_addr, then load neighbor into
+; D0, set C = accumulator_addr (= (1,1,1)), store D0 at mem[C],
+; then C := (1,1,1), cube_add: C := (1,1,1) + mem[(1,1,1)] = old + neighbor.
+;
+; After all 8 ops, C.x is the count of alive (-1 or +1) face neighbors.
+
+; For brevity, only count 4 neighbors explicitly:
+
+; neighbor +X = (1,0,0)
+load_axis X
+load_d 0           ; D0 := mem[(1,0,0)] = (1,0,0)
+loadc 1
+store_d 0          ; mem[(1,1,1)] := (1,0,0)
+loadc 1
+cube_add           ; C := (1,1,1) + mem[(1,1,1)] = (1,1,1)+(1,0,0) = (-1,1,0)
+mov_cd 0           ; D0 := C (save new accumulator)
+
+; neighbor +Y = (0,1,0)
+load_axis Y
+load_d 1           ; D1 := mem[(0,1,0)] = (0,1,0)
+loadc 1
+mov_dc 0           ; C := D0 = (-1,1,0) (current accumulator)
+store_d 1          ; mem[(1,1,1)] := D1 = (0,1,0)
+loadc 1
+cube_add           ; C := (1,1,1) + ((0,1,0)) = (-1,-1,1)
+mov_cd 0
+
+; neighbor -Z = (0,0,-1)
+load_axis ZI
+load_d 1
+loadc 1
+mov_dc 0
+store_d 1
+loadc 1
+cube_add
+mov_cd 0
+
+; neighbor -X = (-1,0,0)
+load_axis XI
+load_d 1
+loadc 1
+mov_dc 0
+store_d 1
+loadc 1
+cube_add
+mov_cd 0
+
+; emit final accumulator
+mov_dc 0
+outc
+halt

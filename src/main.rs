@@ -10,12 +10,13 @@ use btis::vm::VM;
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
+    let trace = args.iter().any(|a| a == "--trace");
+    let positional: Vec<&String> = args.iter().skip(1).filter(|a| *a != "--trace").collect();
+    if positional.is_empty() {
         eprintln!("usage: btis <source.btis> [--trace]");
         return ExitCode::from(2);
     }
-    let src_path = &args[1];
-    let trace = args.iter().any(|a| a == "--trace");
+    let src_path = positional[0];
     let src = match fs::read_to_string(src_path) {
         Ok(s) => s,
         Err(e) => { eprintln!("read error: {e}"); return ExitCode::from(1); }
