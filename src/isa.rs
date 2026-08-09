@@ -52,6 +52,22 @@ pub mod opcodes {
     pub const ROT_Y_180: u8 = 39;
     pub const ROT_Y_270: u8 = 40;
     pub const APPLY_R:   u8 = 41;   // C := R[arg].apply(C)
+    // ROT_*_R: apply the named rotation directly to a rotor register.
+    // arg = rotation index (0..8); target = rotor index (0..7).
+    // R[target] := rotation_table[arg].then(R[target])
+    pub const ROT_Z_90_R:  u8 = 42;
+    pub const ROT_Z_180_R: u8 = 43;
+    pub const ROT_Z_270_R: u8 = 44;
+    pub const ROT_X_90_R:  u8 = 45;
+    pub const ROT_X_180_R: u8 = 46;
+    pub const ROT_X_270_R: u8 = 47;
+    pub const ROT_Y_90_R:  u8 = 48;
+    pub const ROT_Y_180_R: u8 = 49;
+    pub const ROT_Y_270_R: u8 = 50;
+    pub const REFLECT_X_R: u8 = 51;
+    pub const REFLECT_Y_R: u8 = 52;
+    pub const REFLECT_Z_R: u8 = 53;
+    pub const NEG_R:       u8 = 54;
 
     // 56..64 : reflections / inversion / rotor composition
     pub const REFLECT_X:  u8 = 56;

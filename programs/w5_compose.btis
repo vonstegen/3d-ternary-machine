@@ -1,0 +1,49 @@
+; w5_compose.btis — W5: permutation composition workload.
+;
+; Build R = R_a * R_b * R_a * R_c * R_a^-1 * R_b * R_c * R_a from
+; three base rotations and apply R to a cube state.
+;
+; "R_a * R_b" means "first apply R_a, then apply R_b" (function
+; composition in math notation).
+;
+; BT-IS compose_r a b does R[a] := R[a].then(R[b]), where
+; R[a].then(R[b]) means "apply R[a] first, then R[b]" -- i.e.,
+; the composed permutation is R_b ∘ R_a = "first R_a, then R_b".
+;
+; So to build R = R_a * R_b * R_a * R_c * R_a^-1 * R_b * R_c * R_a
+; we start R0 with R_a and successively prepend the next rotation
+; in the order: R_b, R_a, R_c, R_a^-1, R_b, R_c, R_a.
+
+; --- preserve R_a in R4 for later composes ---
+load_r 4
+rot_z_90_r 4      ; R4 := R_a
+
+; --- initialize rotors ---
+load_r 0
+rot_z_90_r 0      ; R0 := R_a  (starting composition)
+
+load_r 1
+rot_x_90_r 1      ; R1 := R_b
+
+load_r 2
+rot_y_90_r 2      ; R2 := R_c
+
+load_r 3
+mov_r 3 0
+inverse_r 3        ; R3 := R_a^-1
+
+; --- compose R = R_a * R_b * R_a * R_c * R_a^-1 * R_b * R_c * R_a ---
+
+compose_r 0 1      ; R0 := R_b ∘ R_a            (= R_a * R_b)
+compose_r 0 4      ; R0 := R_a ∘ R_b ∘ R_a      (= R_a * R_b * R_a)
+compose_r 0 2      ; R0 := R_c ∘ R_a ∘ R_b ∘ R_a (= R_a * R_b * R_a * R_c)
+compose_r 0 3      ; ... * R_a^-1
+compose_r 0 1      ; ... * R_b
+compose_r 0 2      ; ... * R_c
+compose_r 0 4      ; ... * R_a (final)
+
+; --- apply R to (1, 0, 0) ---
+load_axis X
+apply_r 0
+outc
+halt

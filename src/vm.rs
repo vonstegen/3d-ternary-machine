@@ -303,6 +303,20 @@ impl VM {
                 self.push_undo(Undo::RestoreC(self.C));
                 self.C = self.R[idx].apply(self.C);
             }
+            // ROT_*_R: R[target] := named_rotation.then(R[target])
+            // arg is unused; target selects the rotor register.
+            // We post-compose onto R[target] (i.e., apply rotation
+            // AFTER the existing permutation).
+            op if matches_rotor_op(op) => {
+                let idx = (instr.arg as usize) & 0x7;
+                if idx >= ROTOR_COUNT {
+                    return Err(VMError::BadRegister(idx as u8));
+                }
+                let perm = rotation_for_rotor_op(op).unwrap();
+                self.push_undo(Undo::RestoreR(idx, self.R[idx]));
+                // R[idx] := perm.then(R[idx])  (apply perm first, then existing)
+                self.R[idx] = perm.then(self.R[idx]);
+            }
 
             REFLECT_X | REFLECT_Y | REFLECT_Z | NEG => {
                 use crate::symmetry::{
@@ -503,6 +517,44 @@ fn balanced_trit(sum: i16) -> (i8, i8) {
         -2 => ( 1, -1),
         -3 => ( 0, -1),
         _  => panic!("balanced_trit: out-of-range sum {}", sum),
+    }
+}
+
+fn matches_rotor_op(op: u8) -> bool {
+    matches!(op,
+        opcodes::ROT_Z_90_R  | opcodes::ROT_Z_180_R |
+        opcodes::ROT_Z_270_R | opcodes::ROT_X_90_R  |
+        opcodes::ROT_X_180_R | opcodes::ROT_X_270_R |
+        opcodes::ROT_Y_90_R  | opcodes::ROT_Y_180_R |
+        opcodes::ROT_Y_270_R | opcodes::REFLECT_X_R |
+        opcodes::REFLECT_Y_R | opcodes::REFLECT_Z_R |
+        opcodes::NEG_R
+    )
+}
+
+fn rotation_for_rotor_op(op: u8) -> Option<Perm> {
+    use opcodes::*;
+    use crate::symmetry::{
+        NEG as NEG_P, REFLECT_X as REFL_X, REFLECT_Y as REFL_Y, REFLECT_Z as REFL_Z,
+        ROT_X_90 as RX90, ROT_X_180 as RX180, ROT_X_270 as RX270,
+        ROT_Y_90 as RY90, ROT_Y_180 as RY180, ROT_Y_270 as RY270,
+        ROT_Z_90 as RZ90, ROT_Z_180 as RZ180, ROT_Z_270 as RZ270,
+    };
+    match op {
+        ROT_Z_90_R  => Some(*RZ90),
+        ROT_Z_180_R => Some(*RZ180),
+        ROT_Z_270_R => Some(*RZ270),
+        ROT_X_90_R  => Some(*RX90),
+        ROT_X_180_R => Some(*RX180),
+        ROT_X_270_R => Some(*RX270),
+        ROT_Y_90_R  => Some(*RY90),
+        ROT_Y_180_R => Some(*RY180),
+        ROT_Y_270_R => Some(*RY270),
+        REFLECT_X_R => Some(*REFL_X),
+        REFLECT_Y_R => Some(*REFL_Y),
+        REFLECT_Z_R => Some(*REFL_Z),
+        NEG_R       => Some(*NEG_P),
+        _ => None,
     }
 }
 

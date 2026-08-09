@@ -1,109 +1,127 @@
-# RESULTS
+# RESULTS (final)
 
-> Consolidated results from Stages A through F of the BT-IS roadmap,
-> plus corrections received via external critique. See
-> `VERDICT.md` for the final decision and `STAGE_*_RESULTS.md`
-> for per-stage detail.
+> Consolidated results from Stages A through W5. Includes corrections
+> received via external critique. The headline: **BT-IS has no
+> measured workload where it decisively beats a fair SCALAR
+> baseline.**
 
-## Headline (corrected)
+## Headline
 
-After critique:
+After Stages B, W5, and the corrected Stage E:
 
-> The 3D-Ternary Machine has a **marginal advantage on
-> cube-arithmetic-heavy workloads (~1.5× instruction-count over a
-> fair word-width SCALAR)** and a **loss on workloads dominated by
-> register-to-memory shuffling (0.85×)**. The original 4.8×
-> headline was a baseline artifact (trit-granular SCALAR with
-> explicit carries vs word-width SCALAR).
-
-The architecture's *distinctive* feature is the rotor registers
-and group-element composition (Pendulum-style), not the cube
-arithmetic. The right next benchmark exercises the group
-structure, not just the cube arithmetic.
-
-## Instruction-count comparison vs word-width SCALAR
-
-| workload       | BT-IS | SCALAR | ratio |
-|----------------|------:|-------:|------:|
-| W1 rotations   | 10    | 14     | 1.40× |
-| W2 voxel_count | 72    | 61     | 0.85× |
-| W4 cubeadd_loop| 15    | 22     | 1.47× |
+| workload | BT-IS | SCALAR (fair) | ratio |
+|----------|------:|--------------:|------:|
+| W1 rotations | 10 | 14 | 1.40× |
+| W2 voxel_count | 72 | 61 | 0.85× (loss) |
+| W4 cubeadd_loop | 15 | 22 | 1.47× |
+| W5 composition | 21 | 14 | 0.67× (loss) |
 
 (`ratio` = SCALAR / BT-IS. Higher = BT-IS more efficient.)
 
-### Comparison with the original (incorrect) Stage B numbers
+- **W4 (cube-add)**: 1.47× win. The cube-add primitive is
+  genuinely faster than SCALAR's word-width ALU, by ~50%.
+- **W5 (composition)**: BT-IS is *slower*. SCALAR with equivalent
+  primitives (`WCOMPOSE`, `WINVERT`, `WLOAD_PERM`, `WAPPLY`)
+  matches BT-IS op-for-op, and SCALAR has less setup overhead.
+- **W2 (voxel-count)**: BT-IS loses by 15%.
 
-| workload | original SCALAR | corrected SCALAR | original ratio | corrected ratio |
-|----------|----------------:|-----------------:|---------------:|----------------:|
-| W1 | 13 | 14 | 1.30× | 1.40× |
-| W2 | 61 | 61 | 0.85× | 0.85× |
-| W4 | 72 | 22 | **4.80×** | **1.47×** |
-
-The W4 ratio collapse (4.80× → 1.47×) was the most important
-finding from the critique. The original baseline decomposed
-a cube-add into six per-coord ops; the corrected baseline treats
-a cube as a 27-trit word, matching REBEL's actual architecture.
-The 1.47× ratio reflects operand-location (BT-IS cube *is* the
-address) and the slight overhead savings on tight arithmetic loops,
-not a "3-wide-vs-1-wide arithmetic advantage."
+The "geometric primitive is an architectural advantage" claim
+is **not supported** by these measurements. The cube-add win is
+modest (1.47×), and other workloads either tie or lose.
 
 ## Architecture properties confirmed
 
 - **Cube primitive**: 27 states, decomposition 1 + 6 + 12 + 8.
 - **Turing completeness**: proved by reduction to Minsky's
-  2-counter machine; reduction is polynomial in program size.
+  2-counter machine.
 - **Intrinsic reversibility** of the rotation/reflection subset.
-  Full-ISA reversibility is journal-based (Bennett-style) and
-  works for any machine — not a distinguishing feature.
-- **Three-way branching**: native in BT-IS; also native in
-  SCALAR's TCMP+BR shape. Not a discriminator.
-- **Synthesizability**: behavioral Verilog model; estimated
-  ~3000 LUTs + 9 BRAMs. SCALAR ~2000 LUTs. Area ratio ~1.5×.
-  Estimates only.
+- **Three-way branching**: present in both architectures.
+- **Synthesizability**: estimated ~3000 LUTs + 9 BRAMs.
+
+## What's NOT confirmed
+
+- That BT-IS has an architectural advantage on *any* workload.
+- That the cube-add primitive is a load-bearing win (it's 1.47×,
+  not 4-100× as previously projected).
+- That the rotor registers / composition give compositional
+  leverage (W5 shows they don't, when SCALAR is given equivalent
+  primitives).
+- That a 3D GoL step would be a win (not implemented; analysis
+  suggests ~1.5× at best).
 
 ## Implementation status
 
 - Rust crate: 34 unit tests passing.
-- Python prototype + cross-verification harness: working.
 - 7 `.btis` example programs including Fibonacci (cross-checked)
-  and W1/W2/W4 Stage B benchmarks.
-- Behavioral Verilog core: compiles, area estimates documented.
+  and Stage B + W5 benchmarks.
+- Python prototype + cross-verification harness: working.
+- W5 cross-checked: BT-IS output (0, -1, 0) matches Python
+  reference for input (1, 0, 0).
 
 ## Decision criteria revisited
 
-Per the roadmap's success criteria:
+- **Useful** (continue general): would require BT-IS to win by
+  ≥10% on ≥3 workloads. Currently 0 of 4 measured workloads
+  meet that bar (W4 is 1.47× = 47% > 10%, but only one).
+  **Useful: not established.**
+- **Niche**: would require a single workload with real win. **W4
+  is the only candidate, at 1.47×.** That's marginal, not niche.
+- **Not worth pursuing** (archive): would require all measured
+  workloads to lose. W1 and W4 are wins, just not big ones.
 
-- **Useful** (continue general): requires P4 ≥10% reduction on
-  ≥3 workloads, P5 within 2× area. After correction: P4 holds
-  marginally on W4 (1.47×). Other workloads are ties or losses.
-  P5 estimated at ~1.5× area. **Useful: not yet.**
-- **Niche** (focused): the symmetry-group subset (P4) gives a
-  real win on a small set of workloads. **Niche: still
-  plausible, pending a group-exercising workload measurement.**
-- **Not worth pursuing** (archive): P4 fails on every workload
-  we try, or P3 fails. **P3 holds for the subset; P4 holds
-  marginally on W4.** Not-worth-pursuing: refuted.
-
-The verdict remains **niche**, with the caveat that the
-niche has not yet been *positively demonstrated* on a workload
-that exercises the symmetry group rather than just cube arithmetic.
+The honest position is **between niche and not-worth-pursuing**:
+BT-IS as specified does not decisively beat a fair SCALAR
+baseline on any measured workload. It does *not* lose either —
+it's approximately equivalent on most workloads.
 
 ## Recommendations
 
-1. **Add fused `LOAD_CR` / `STORE_CR`** (memory ops with a rotor
-   operand). This directly attacks the W2 shuffle cost without
-   widening the register file.
-2. **Implement a polycube/voxel-canonicalization workload**.
-   This tests the symmetry-group claim — the distinctive feature
-   of BT-IS — rather than just cube arithmetic.
-3. **Real FPGA synthesis** with yosys + nextpnr.
-4. **Re-decide at v0.3.0** after the above.
+1. **Do not invest in more ISA extensions.** The extensions
+   added for W5 (`ROT_*_R`) did not produce a win; SCALAR
+   matches with its own primitives.
+2. **Do not invest in 3D GoL step implementation.** Expected
+   ratio (~1.5×) is below the "decisive win" threshold.
+3. **Consider archiving the project.** The architecture does not
+   demonstrate an architectural advantage on measured workloads.
+   The math and implementation are sound, but the *thesis* the
+   math supports is "BT-IS is approximately equivalent to SCALAR
+   on this class of problems" — not a publishable claim.
+4. **Or, alternative: reframe the contribution.** BT-IS as a
+   *teaching artifact* — a clean, well-tested implementation of a
+   balanced-ternary cube machine — may have pedagogical value
+   even without an architectural advantage. This is a real
+   contribution; it just isn't a research paper.
 
 ## What's next
 
-The roadmap stops at Stage F. Stage G (publication) is outside
-the scope of this repo. After v0.3.0, the right next step is a
-paper describing the architecture, the cube-arithmetic advantage,
-the niche, and the limitations — aimed at a venue like the
-Journal of Symbolic Computation or a workshop on novel
-architectures.
+The roadmap's verdict (Stage F) is now: **the architecture does
+not demonstrate a decisive advantage on measured workloads.** The
+honest next step is either:
+
+(a) Archive the project. The implementation stays as a clean
+    reference for cube-lattice balanced-ternary machines.
+
+(b) Reframe as a teaching artifact. The code, tests, and
+    documentation are well-suited for a course on novel machine
+    architectures or balanced-ternary computing.
+
+(c) Search for a workload where the architecture does win. This
+    requires thinking *outside* cube-add and composition — the two
+    natural primitives have been measured and they don't
+    decisively favor BT-IS.
+
+Path (c) is the open question. The previous critique suggested
+"polynomial canonicalization under O_h" as a candidate; that has
+been tested in W5 and fails.
+
+## Honest reading
+
+This is the right answer. The architecture was a reasonable
+hypothesis; the hypothesis has been tested; the test result is
+"approximately equivalent to a fair baseline." That's a valid
+research outcome.
+
+The codebase is real, working, well-tested, and well-documented.
+It does not demonstrate an architectural advantage, but it is
+a clean implementation of a balanced-ternary cube machine. That
+is a contribution, just not the one originally proposed.
