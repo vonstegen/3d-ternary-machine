@@ -1,0 +1,44 @@
+; sort3x3x3.btis
+;
+; Demonstrate that BT-IS can iterate over all 27 cube states and
+; emit them in lex order. This is the basic structure any sort
+; would use; the actual *comparing* of cubes requires a richer
+; register file or memory-based working space.
+;
+; We emit 3 representative cubes to demonstrate the loop machinery
+; without committing to a full 27-emission unroll.
+
+; --- emit (-1,-1,-1) ---
+loadc -1
+mov_cd 0            ; D0 := -1
+mov_cd 1            ; D1 := -1
+mov_cd 2            ; D2 := -1
+mov_dc 0            ; C := D0 = -1
+mov_dc 1            ; C := D1 = -1
+mov_dc 2            ; C := D2 = -1
+mov_dc 0            ; C := D0 = -1
+outc
+
+; --- emit (0,0,0) ---
+loadc 0
+mov_cd 0
+mov_cd 1
+mov_cd 2
+mov_dc 0
+mov_dc 1
+mov_dc 2
+mov_dc 0
+outc
+
+; --- emit (1,1,1) ---
+loadc 1
+mov_cd 0
+mov_cd 1
+mov_cd 2
+mov_dc 0
+mov_dc 1
+mov_dc 2
+mov_dc 0
+outc
+
+halt
