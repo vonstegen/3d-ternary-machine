@@ -4,27 +4,35 @@
 > "what is the thesis and how is it different from prior art" document.
 > Not a finished paper — a positioning memo that the actual paper can
 > be cut down from.
+>
+> Includes corrections received via external critique (see
+> `docs/CRITIQUE_RESPONSE.md`).
 
 ## 1. The claim
 
-BT-IS (Bi-Ternary / 3D-Ternary Instruction System) is a machine
-architecture in which the **primitive computational state** is a
-*balanced-ternary vector* in `{-1, 0, +1}^3`, and the **primitive
-computational operations** are *permutations of that 27-element set*
-induced by the cube's rotational and reflection symmetries.
+A machine architecture called the **3D-Ternary Machine** (BT-IS)
+whose **primitive state is a balanced-ternary 3-vector** in the
+27-element set `{-1, 0, +1}^3` (called *the cube*), and whose
+**primitive operations include permutations of cube states**
+induced by the cube's rotational and reflection symmetries, can
+express useful computation more efficiently than a scalar
+balanced-ternary RISC on at least one class of workloads.
 
-The cube's 27 states decompose geometrically into 1 center, 6 axial,
-12 face-diagonal, and 8 corner states. This decomposition is *not*
-notation — it is the source of instruction semantics:
+The cube decomposes geometrically into 1 center, 6 axial, 12
+face-diagonal, and 8 corner states. This decomposition is *not*
+sacred — it's the `Σ C(3,k) · 2^k` orbit partition of nonzero
+coordinates, which exists identically at every dimension. The
+*number* 27 is special only as the smallest nontrivial case
+where the symmetry group (octahedral, 24 rotations) is interesting.
 
-- the center is the natural identity / halt / neutral element,
-- the six axial states are primitive one-axis operations,
-- the twelve face-diagonal states are coupled two-axis operations,
-- the eight corner states are three-way combined operations.
-
-The arithmetic, control-flow, and memory primitives of the machine are
-derived from this 27-element geometric universe, not assigned as
-arbitrary opcodes.
+The architecture has **two algebras on the cube**: a permutation
+algebra (rotations, reflections, compositions, inverses) and an
+arithmetic algebra (cube-add with carry through x, y, z). These
+do not unify algebraically. The arithmetic algebra treats
+coordinates as positional digits with place value; the
+permutation algebra treats them as interchangeable spatial axes.
+BT-IS ships both; the geometric claim is *about the permutation
+algebra*, not about the arithmetic one.
 
 ## 2. Why this is not yet another ternary ISA
 
@@ -38,34 +46,71 @@ BT-IS is structurally different:
    strings of trits. The geometry of `q` is part of its semantics; the
    ordering of trits in a Setun word is not.
 
-2. **Operations are permutations of cube states, not numeric opcodes.**
-   A rotation of the cube is a permutation of the 27-element set
-   `{-1,0,+1}^3`. Every instruction in BT-IS is a permutation of cube
+2. **Operations are permutations of cube states.** A rotation of the
+   cube is a permutation of the 27-element set
+   `{-1, 0, +1}^3`. Every instruction in BT-IS is a permutation of cube
    states. This means there are exactly 27! possible operations, but
    the cube's symmetry group has only 24 orientation-preserving and
-   48 orientation-reversing elements — *the natural operations form a
-   small, geometrically meaningful subset.*
+   48 orientation-reversing elements — *the natural operations form
+   a small, geometrically meaningful subset.*
 
-3. **Control flow is three-way, not two-way.** Balanced ternary gives
+3. **First-class group elements.** Rotor registers `R0..R7` hold
+   permutations as values. They can be composed (`COMPOSE_R`),
+   inverted (`INVERSE_R`), and applied to cube state (`APPLY_R`).
+   This is in the lineage of Pendulum-style reversible machines and
+   Toffoli-style conservative logic.
+
+4. **Control flow is three-way, not two-way.** Balanced ternary gives
    a natural three-way comparison sign `(gt, eq, lt)` which is itself a
    cube. BT-IS's `CMP` instruction writes this sign into the flag
-   register `F` and `BR_NEG / BR_ZERO / BR_POS` dispatch on it. There
-   is no need for a separate "less than / equal / greater than"
-   cascade of two-way branches.
+   register `F` and `BR_NEG / BR_ZERO / BR_POS` dispatch on it.
 
-4. **Memory addresses are cube coordinates.** `STORE n` writes `C` to
-   `mem[Cube(n,n,n)]`. Memory is addressed by points in the cube, so
-   locality of reference is geometric locality: two addresses differing
-   by Hamming distance 1 are face-adjacent cells.
+5. **Memory addresses are cube coordinates.** `STORE_C` writes `C` to
+   `mem[C]`; `LOAD_C` reads `mem[C]` into `C`. The address *is* the
+   cube state. Locality of reference is geometric locality: two
+   addresses differing by Hamming distance 1 are face-adjacent cells.
 
-5. **Programs are trajectories through the 27-cube.** A BT-IS program
-   is a sequence of permutations applied to a single cube state `C`. The
-   sequence of cubes visited by `C` during execution is the program's
-   *trajectory*. Reversibility becomes a property of the trajectory
-   (each step has a known inverse permutation) rather than an
-   architectural special case.
+6. **Intrinsic reversibility holds for the rotation/reflection
+   subset.** Each `ROT_*` / `REFLECT_*` / `NEG` op is a permutation
+   with an inverse in the group, so the rotation/reflection subset
+   is intrinsically reversible. The full ISA (including
+   `cube_add`, `STORE_C`, arithmetic) is *not* intrinsically
+   reversible — `vm.undo_all()` is a Bennett-style journal-based
+   history reversal that works for any machine and is not a
+   distinguishing property of BT-IS.
 
 ## 3. Where this sits relative to prior art
+
+### Closer-than-REBEL prior art: reversible / group-element machines
+
+The architectural feature that *is* distinctive about BT-IS is not
+"ternary" or "27-state" — it's the rotor registers (`R0..R7`) and
+the first-class manipulation of group elements (`COMPOSE_R`,
+`INVERSE_R`, `APPLY_R`). This lineage includes:
+
+- **Toffoli / Fredkin / conservative logic**: reversible gates,
+  permutation-based computation.
+- **Pendulum (Frank, 2017)**: reversible computing with explicit
+  group-element manipulation as first-class values. The rotor
+  registers in BT-IS are Pendulum-style.
+- **Group-equivariant computation (Cohen/Welling, E(3)-NNs)**: the
+  cube's symmetry group `O_h` is the natural domain for
+  group-averaged kernels. BT-IS's group operations are the
+  primitive that an equivariant network would consume.
+
+BT-IS should be understood as a *cube-lattice group machine*, not
+as "another balanced-ternary ISA." The ternary alphabet is
+incidental; the *group* is the substance.
+
+Adjacent territory worth flagging:
+
+- **Ternary content-addressable memory**: STORE/LOAD addressed
+  by cube coordinates is a small associative structure.
+- **GF(3) linear-algebra machines**: 3-trit values are GF(3)
+  elements. Cube arithmetic is GF(3)^3 linear-ish algebra.
+
+(REBEL remains a comparison point because it is the most recent
+balanced-ternary machine, but it is *not* the closest prior art.)
 
 ### REBEL / Bos 2024
 
@@ -87,55 +132,21 @@ BT-IS is *not* a REBEL variant. The differences:
 | arity          | RISC-like 2-op      | single-state update   |
 
 REBEL encodes Boolean-style computation in balanced ternary. BT-IS
-replaces Boolean-style computation with cube-geometry computation.
+replaces Boolean semantics with cube-geometry semantics — for the
+permutation subset. The arithmetic subset (cube-add) is a
+3-trit scalar word add, which REBEL could equally well express.
 
-### Setun / Setnex
+### Setun (1958), Setnex (modern)
 
-The original Setun (1958) used balanced ternary with 24 instructions.
-Setnex is a contemporary clean-slate ternary ISA with 27-trit words
-and three-way branching. Both encode balanced-ternary *values*; neither
-encodes balanced-ternary *states as cube points* with geometric
-semantics.
+Balanced-ternary ISAs; sequences of trits in instruction words, not
+3-vectors. Closest comparison point but not the closest prior art.
 
 ### Geometric algebra (GA)
 
 Geometric algebra (Hestenes, Dorst) provides a mathematical language
 for representing vectors, rotations, translations, reflections, and
 projective operations as elements of a Clifford algebra. The continuous
-## 6. Measurements
-
-Release-mode throughput on a single thread (`aarch64-unknown-linux-gnu`,
-Rust 1.97, `opt-level = 3`, `lto = true`):
-
-| implementation                    | throughput                          |
-|-----------------------------------|-------------------------------------|
-| `btis_pure_lut` (raw 27-entry LUT)| ~11 billion LUT lookups/sec         |
-| `btis_bench` (BT-IS VM, in-process)| ~90 million instructions/sec        |
-| `bench_rot.btis` via CLI          | ~9 kips (dominated by process spawn) |
-| Python reference (scalar RISC)    | ~70 million instructions/sec        |
-
-Both BT-IS and the scalar reference execute *one* cube rotation per
-instruction. The instruction count for a workload is the same. The
-~30% BT-IS advantage over Python reflects Rust vs interpreter
-overhead, not architectural difference.
-
-The interesting number is *instructions per geometric operation*: BT-IS
-needs 1 instruction to rotate a cube; the same is true of a scalar
-balanced-ternary RISC. The architectural claim is not "fewer
-instructions per geometric op" but "the cube *is* the operand": data,
-instructions, addresses, and flags are all cubes. This uniformity is
-what enables reversibility and three-way branching natively.
-
-## 6.1 Verdict (Stages A-F)
-
-After completing the roadmap stages A through F, the architecture
-is classified as **niche**: genuine geometric advantages on
-cube-arithmetic-heavy workloads (Stage B W4: 4.8x instruction-count
-reduction), but a loss on workloads dominated by register-to-memory
-shuffling (Stage B W2: 0.85x). The full verdict is in
-VERDICT.md and the consolidated results in docs/RESULTS.md.
-
-## 7. Open problems
+relaxation at `/tmp/vrml_proto/python/` (Vec, Bivec, Trivec, Rotor)
 implements the `Cl(3)` rotors. The prototype is mathematically
 consistent with the BT-IS cube (rotors of 90° about axes correspond
 to the cube's `ROT_*` instructions), but it is *not* the machine.
@@ -143,15 +154,16 @@ to the cube's `ROT_*` instructions), but it is *not* the machine.
 ### Vector-symbolic architectures (VSA) / hyperdimensional computing
 
 VSA represents symbols as high-dimensional real-valued vectors and
-defines an algebra (binding, bundling, permutation) over them. HD
-computing has been used for analogy, reasoning, and lightweight
-classification.
+defines an algebra (binding, bundling, permutation) over them.
 
-VSA operates on *real-valued* high-dimensional vectors; BT-IS operates
-on *ternary-valued* 3-dimensional vectors. The 27 states of the BT-IS
-cube are not a "trick" — they are exactly the geometric space that the
-3D balanced-ternary lattice defines. A VSA of dimension 27 with
-balanced-ternary components recovers BT-IS.
+We previously claimed that "BT-IS is a VSA of dimension 27 with
+balanced-ternary components." That framing is wrong. VSA's
+useful properties (quasi-orthogonality, concentration of measure,
+robust superposition) emerge at *high* dimension (typically
+d=1000+). At d=3, BT-IS shares only the alphabet (ternary symbols);
+the statistical properties that make VSA useful do not appear.
+We retain the comparison only to note that BT-IS is *not* in
+the VSA family.
 
 ### Cellular automata / multidimensional automata
 
@@ -172,26 +184,43 @@ vectors.
 
 ## 4. The central hypothesis
 
-> *Can geometric relationships among the 27 balanced-ternary states
-> `{-1, 0, +1}^3` reduce the complexity of useful computation?*
+> **H.** There exists a non-trivial class of algorithms `A` for which
+> a `BT-IS` implementation uses *strictly fewer* state-mutating
+> instructions than a `SCALAR` (REBEL-style 27-trit word) implementation,
+> and the reduction is attributable to *the symmetry group of the cube*
+> (rotations, reflections, compositions) — not just to a difference
+> in representation.
 
-This is the empirical question that BT-IS exists to test. The
-hypothesis has two parts:
+Note the revision: the original hypothesis said "geometric
+structure of the cube." After critique, the testable claim is
+narrower: *the symmetry group* — not the arithmetic algebra —
+must do work that a word-width SCALAR baseline can't do as cheaply.
 
-1. *Sufficiency.* BT-IS can express arithmetic, memory addressing,
-   branching, and looping — i.e., the basic ingredients of universal
-   computation. (Yes; demonstrated by the countdown and rotation
-   trajectory programs in `programs/`.)
+### Falsifiable predictions
 
-2. *Necessity / parsimony.* The geometric structure of the cube
-   *reduces* the instruction count for certain natural workloads
-   compared to a Boolean ISA expressing the same algorithm. (Open; not
-   yet measured in the prototype.)
+P1. Three-way comparison (`CMP` + 3-way branch) replaces cascades of
+    2-way branches in real code at non-trivial frequency.
+P2. Cube-addressed memory (`STORE_C` / `LOAD_C`) collapses what would
+    be multiple load/store + arithmetic ops in `SCALAR` into one
+    geometric op, on geometric-locality workloads.
+P3. **Intrinsic** reversibility of the rotation/reflection subset
+    (each op is a group element with an inverse) — distinct from
+    the journal-based reversibility of the full ISA.
+P4. On workloads that exercise the *group structure itself*
+    (e.g. polycube/voxel canonicalization under O_h, group-equivariant
+    convolution), BT-IS instruction count is ≤ SCALAR with ≥10%
+    reduction on ≥50% of workloads.
+P5. On native hardware (FPGA / ASIC), BT-IS area ≤ 2× SCALAR for
+    the same per-op cost.
 
-The prototype tests (1) — we can write non-trivial programs. It does
-not yet test (2) — that requires benchmarks against a reference ISA
-on workloads the architecture was designed for (3D vector rotation,
-3D GoL, voxel neighborhood iteration, three-way branching).
+### Success criteria
+
+- **Useful (continue general):** ≥3 of P1–P5 confirmed, P4 ≥ 10%
+  reduction on ≥3 workloads, P5 within 2× area.
+- **Niche (focused):** the symmetry-group subset (P4) gives a real
+  win on a small set of workloads.
+- **Not worth pursuing (archive):** P4 fails on every workload
+  we try, or P3 fails (no intrinsic reversibility — already shown).
 
 ## 5. What the prototype demonstrates
 
@@ -209,34 +238,101 @@ reference) together implement:
 - A CLI driver: `cargo run -- programs/hello.btis` etc.
   (`src/main.rs`).
 
-Test coverage: 26 unit tests, all passing. End-to-end programs
-demonstrate that geometric operations compose and that the trajectory
-through cube state space is the program's execution.
+Test coverage: 34 unit tests, all passing. End-to-end programs
+demonstrate that geometric operations compose and that the
+trajectory through cube state space is the program's execution.
 
-## 6. Open problems
+## 6. Measurements
 
-- **Reversibility.** A BT-IS program is a permutation of cube states
-  composed at each step; every permutation has an inverse, so
-  execution is in principle reversible. Implementing *automatic*
-  reversibility (snapshotting the inverse trajectory alongside the
-  forward one) is straightforward but not yet done.
+Release-mode throughput on a single thread (`aarch64-unknown-linux-gnu`,
+Rust 1.97, `opt-level = 3`, `lto = true`):
 
-- **Multi-word state.** The current VM has a single `C` cube as live
-  state. Real programs need multiple live cubes (e.g. one for the
-  loop counter, one for the current data value). A register file of
-  cubes is a natural extension; the ISA currently has `C` and `F`.
+| implementation                    | throughput                          |
+|-----------------------------------|-------------------------------------|
+| `btis_pure_lut` (raw 27-entry LUT)| ~11 billion LUT lookups/sec         |
+| `btis_bench` (BT-IS VM, in-process)| ~90 million instructions/sec        |
+| `bench_rot.btis` via CLI          | ~9 kips (dominated by process spawn) |
+| Python reference (scalar RISC)    | ~70 million instructions/sec        |
 
-- **Native hardware.** Once the abstract machine is mathematically
-  sound, the question is whether the 27-entry LUTs can be implemented
-  efficiently in dedicated hardware (FPGA, ASIC). The LUT structure
-  is small enough (27 bytes per operation) that an FPGA could hold
-  hundreds of distinct cube operations in on-chip memory.
+Both BT-IS and the scalar reference execute *one* cube rotation per
+instruction. The instruction count for a workload is the same. The
+~30% BT-IS advantage over Python reflects Rust vs interpreter
+overhead, not architectural difference.
 
-- **Benchmarks.** The central hypothesis needs numbers. Candidate
-  workloads: rotating a vector 1000 times, computing a GoL step on the
-  27-cube, three-way-merge on a balanced-ternary sequence.
+### Stage B (corrected) — instruction-count vs word-width SCALAR
 
-## 7. Naming
+The headline BT-IS advantage after correcting for a fair word-width
+baseline (not a per-coord-strawman):
+
+| workload       | BT-IS | SCALAR (word-width) | ratio |
+|----------------|------:|--------------------:|------:|
+| W1 rotations   | 10    | 14                  | 1.40× |
+| W2 voxel_count | 72    | 61                  | 0.85× |
+| W4 cubeadd_loop| 15    | 22                  | 1.47× |
+
+The 1.5× ratio on W4 reflects the operand-location advantage (BT-IS
+uses `C + mem[C]` where SCALAR needs pre-loaded registers), not a
+3-wide-vs-1-wide arithmetic advantage. The corrected verdict
+honestly is: marginal win on arithmetic-heavy workloads,
+loss on register-shuffle-heavy workloads.
+
+A *symmetry-group-exercising* workload (polycube canonicalization
+under O_h, group-equivariant convolution) is the next benchmark
+to test. See `docs/CRITIQUE_RESPONSE.md` for the full response.
+
+## 7. Honest corrections
+
+The project has been corrected in response to external critique.
+The full response is in `docs/CRITIQUE_RESPONSE.md`. Summary:
+
+- **Reversibility**: the full ISA is *not* intrinsically
+  reversible; only the rotation/reflection subset is. The
+  journal-based `vm.undo_all()` works for any machine. The
+  earlier claim was overstated.
+- **Prior art**: BT-IS is closer to Pendulum / reversible
+  group-element machines than to REBEL. The ternary alphabet
+  is incidental; the group is the substance.
+- **VSA framing**: removed. d=3 is not "VSA in 3 dimensions";
+  VSA's properties require high dimension.
+- **Polynomial claim** (Turing-completeness): the reduction is
+  polynomial in *program size*, not in *execution time*.
+  2CM-simulates-TM has exponential slowdown.
+- **SCALAR baseline** (Stage B): the original was per-coord
+  with explicit carries. Replaced with a word-width ALU
+  (`WADD cd1, cd2` in one instruction), which is what REBEL
+  actually does. The 4.8× headline collapses to 1.47×.
+
+## 8. What this is *not*
+
+It is **not** a commitment to a release schedule. Stages B and D
+might fail and produce "niche" or "archive" outcomes; that's a
+success for the project (we *learned something*), not a failure.
+
+It is **not** advocacy. The hypothesis `H` is falsifiable, and the
+verdict could be "no, this isn't useful". The roadmap respects that.
+
+It is **not** a complete research program. A complete program
+would also include: comparison to other recent ternary / vector /
+geometric ISAs (Bos 2024, KAIST ART-9, Pendulum, Frank's reversible
+machines, E(3)-equivariant NNs), a published paper, and external
+review. Those are out of scope for this repo.
+
+## 9. Open problems
+
+- **The register-file weakness** (W2 loss). The fix proposed by
+  critique is fused `LOAD_CR` / `STORE_CR` (memory ops with a rotor
+  operand), not wider registers. Implement and re-measure.
+- **A symmetry-group workload**. Polycube/voxel canonicalization
+  under O_h, or O_h-equivariant convolution, would test the actual
+  distinctive feature of the architecture (the rotor registers
+  and group composition), not just cube arithmetic.
+- **Native hardware synthesis**. Stage D's area estimates are
+  estimates. Real yosys + nextpnr (or Vivado) synthesis is the
+  next step.
+- **Full 3D Game-of-Life step** in BT-IS. The scaffolding is in
+  `programs/life3d_step.btis`; a full step is a Stage F follow-up.
+
+## 10. Naming
 
 *BT-IS* (Bi-Ternary / 3D-Ternary Instruction System) is a working name.
 The ChatGPT-suggested "bi-ternary machine language" is apt but the

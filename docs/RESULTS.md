@@ -1,46 +1,65 @@
 # RESULTS
 
-> Consolidated results from Stages A through F of the BT-IS roadmap.
-> See `VERDICT.md` for the final decision and `STAGE_*_RESULTS.md`
+> Consolidated results from Stages A through F of the BT-IS roadmap,
+> plus corrections received via external critique. See
+> `VERDICT.md` for the final decision and `STAGE_*_RESULTS.md`
 > for per-stage detail.
 
-## Headline
+## Headline (corrected)
 
-The 3D-Ternary Machine is **a niche architecture with genuine
-geometric advantages on cube-arithmetic-heavy workloads, and a
-loss on workloads dominated by register-to-memory traffic**. We
-recommend continuing development in a narrowed scope.
+After critique:
 
-## Instruction-count comparison vs SCALAR (Stage B)
+> The 3D-Ternary Machine has a **marginal advantage on
+> cube-arithmetic-heavy workloads (~1.5× instruction-count over a
+> fair word-width SCALAR)** and a **loss on workloads dominated by
+> register-to-memory shuffling (0.85×)**. The original 4.8×
+> headline was a baseline artifact (trit-granular SCALAR with
+> explicit carries vs word-width SCALAR).
+
+The architecture's *distinctive* feature is the rotor registers
+and group-element composition (Pendulum-style), not the cube
+arithmetic. The right next benchmark exercises the group
+structure, not just the cube arithmetic.
+
+## Instruction-count comparison vs word-width SCALAR
 
 | workload       | BT-IS | SCALAR | ratio |
 |----------------|------:|-------:|------:|
-| W1 rotations   | 10    | 13     | 1.30× |
+| W1 rotations   | 10    | 14     | 1.40× |
 | W2 voxel_count | 72    | 61     | 0.85× |
-| W4 cubeadd_loop| 15    | 72     | 4.80× |
+| W4 cubeadd_loop| 15    | 22     | 1.47× |
 
 (`ratio` = SCALAR / BT-IS. Higher = BT-IS more efficient.)
 
-BT-IS dominates on the cube-arithmetic-heavy workload (W4: 4.8×)
-because the `cube_add` primitive absorbs 6 per-coord SCALAR ops
-into 1 BT-IS op. BT-IS loses on the workload dominated by register
-shuffling (W2: 0.85×) because the current 4 cube data registers
-are too few to hold binary operands simultaneously.
+### Comparison with the original (incorrect) Stage B numbers
+
+| workload | original SCALAR | corrected SCALAR | original ratio | corrected ratio |
+|----------|----------------:|-----------------:|---------------:|----------------:|
+| W1 | 13 | 14 | 1.30× | 1.40× |
+| W2 | 61 | 61 | 0.85× | 0.85× |
+| W4 | 72 | 22 | **4.80×** | **1.47×** |
+
+The W4 ratio collapse (4.80× → 1.47×) was the most important
+finding from the critique. The original baseline decomposed
+a cube-add into six per-coord ops; the corrected baseline treats
+a cube as a 27-trit word, matching REBEL's actual architecture.
+The 1.47× ratio reflects operand-location (BT-IS cube *is* the
+address) and the slight overhead savings on tight arithmetic loops,
+not a "3-wide-vs-1-wide arithmetic advantage."
 
 ## Architecture properties confirmed
 
-- **Cube primitive**: 27 states, decomposition 1 + 6 + 12 + 8
-  verified (Stage A math model).
+- **Cube primitive**: 27 states, decomposition 1 + 6 + 12 + 8.
 - **Turing completeness**: proved by reduction to Minsky's
-  2-counter machine (Stage A).
-- **Reversibility**: per-step undo is constant-time; full
-  program reversal is automatic by VM construction (Stage C).
-- **Three-way branching**: native in both BT-IS and SCALAR; not a
-  discriminator between the two architectures (Stage C).
-- **Synthesizability**: behavioral Verilog model + area
-  estimates show BT-IS fits on a low-cost FPGA (~3000 LUTs +
-  9 BRAMs), 1.5× the SCALAR baseline's area (Stage D, estimates
-  only).
+  2-counter machine; reduction is polynomial in program size.
+- **Intrinsic reversibility** of the rotation/reflection subset.
+  Full-ISA reversibility is journal-based (Bennett-style) and
+  works for any machine — not a distinguishing feature.
+- **Three-way branching**: native in BT-IS; also native in
+  SCALAR's TCMP+BR shape. Not a discriminator.
+- **Synthesizability**: behavioral Verilog model; estimated
+  ~3000 LUTs + 9 BRAMs. SCALAR ~2000 LUTs. Area ratio ~1.5×.
+  Estimates only.
 
 ## Implementation status
 
@@ -55,28 +74,29 @@ are too few to hold binary operands simultaneously.
 Per the roadmap's success criteria:
 
 - **Useful** (continue general): requires P4 ≥10% reduction on
-  ≥3 workloads, P5 within 2× area. **W4 achieves 4.8×**, but
-  only one workload is verified. W2 fails. P5 estimated at
-  ~1.5× but unmeasured. **Useful: not yet.**
-- **Niche** (focused): requires P1, P3, P4 holds on a narrow
-  class. **P3 confirmed; P1 qualitative only; P4 holds on W4**.
-  W4 is the cube-arithmetic niche. **Niche: confirmed.**
-- **Not worth pursuing** (archive): requires P4 fails on every
-  workload or P3 fails. **P4 holds on W4 (a real workload);
-  P3 confirmed.** Not-worth-pursuing: refuted.
+  ≥3 workloads, P5 within 2× area. After correction: P4 holds
+  marginally on W4 (1.47×). Other workloads are ties or losses.
+  P5 estimated at ~1.5× area. **Useful: not yet.**
+- **Niche** (focused): the symmetry-group subset (P4) gives a
+  real win on a small set of workloads. **Niche: still
+  plausible, pending a group-exercising workload measurement.**
+- **Not worth pursuing** (archive): P4 fails on every workload
+  we try, or P3 fails. **P3 holds for the subset; P4 holds
+  marginally on W4.** Not-worth-pursuing: refuted.
 
-The verdict is **niche**. The architecture has real, measurable
-advantages on cube-arithmetic-heavy workloads. These workloads
-are not the general case, but they exist and are interesting.
+The verdict remains **niche**, with the caveat that the
+niche has not yet been *positively demonstrated* on a workload
+that exercises the symmetry group rather than just cube arithmetic.
 
 ## Recommendations
 
-1. **Add more cube data registers (D4..D7)** to fix the W2 loss.
-   This is a small ISA extension; estimated cost ~20-40 LOC.
-2. **Implement the 3D Game-of-Life step** to test the strong
-   expected BT-IS advantage on the niche's flagship workload.
-3. **Real FPGA synthesis** with yosys + nextpnr to convert
-   Stage D estimates into measurements.
+1. **Add fused `LOAD_CR` / `STORE_CR`** (memory ops with a rotor
+   operand). This directly attacks the W2 shuffle cost without
+   widening the register file.
+2. **Implement a polycube/voxel-canonicalization workload**.
+   This tests the symmetry-group claim — the distinctive feature
+   of BT-IS — rather than just cube arithmetic.
+3. **Real FPGA synthesis** with yosys + nextpnr.
 4. **Re-decide at v0.3.0** after the above.
 
 ## What's next

@@ -1,26 +1,27 @@
-# Stage B results
+# Stage B results (corrected)
 
-> Expressiveness comparison: BT-IS vs a SCALAR balanced-ternary
-> RISC baseline. Measures state-mutating instruction counts on
-> representative workloads.
+> Expressiveness comparison: BT-IS vs a word-width SCALAR
+> balanced-ternary RISC baseline. State-mutating instruction counts
+> on representative workloads.
+
+> **Note:** this is the *corrected* version. The original Stage B
+> used a trit-granular SCALAR (per-coord ops with explicit carries)
+> which produced an inflated 4.8× headline. A fair word-width
+> baseline shows the actual ratio is ~1.5×. The original numbers
+> are preserved in git history (commit `a2c38d2`).
 
 ## Method
 
-For each workload we implement the same algorithm twice:
+Same as before — implement each workload twice, count mutating
+instructions — but with a corrected baseline:
 
-1. **BT-IS** — a `.btis` program assembled and run by the BT-IS CLI.
-2. **SCALAR** — a Python emulator (`benchmarks/scalar_vm.py`) that
-   interprets an explicit SCALAR program. SCALAR is the "no
-   geometric primitives" baseline: it has 8 trit registers `R0..R7`,
-   8 cube registers `C0..C7`, and per-coord scalar operations
-   (`CADDX/Y/Z`, `CARRY_X/Y/Z`, `TCMP`, `TADD`, etc.). Geometric
-   operations that BT-IS does in 1 op (e.g. `cube_add`) require
-   SCALAR to do 6 ops (3 CADD + 3 CARRY).
+- The SCALAR baseline uses a *word-width* ALU: `WADD cd1, cd2`
+  is one cube-add instruction (mirroring REBEL's 27-trit word
+  model). The original trit-granular baseline decomposed this
+  into `CADDX + CADDY + CADDZ + CARRY_X + CARRY_Y + CARRY_Z`
+  (six ops), which was an unfair handicap.
 
-The metric is *state-mutating instruction count*. Branch instructions
-that don't mutate state are not counted.
-
-We ran three workloads:
+Three workloads:
 
 | ID | name              | what it stresses                |
 |----|-------------------|---------------------------------|
@@ -28,88 +29,82 @@ We ran three workloads:
 | W2 | voxel_count       | cube memory + cube-add          |
 | W4 | cubeadd_loop      | pure cube-add                   |
 
-(W3 — three-way merge — was designed but found to be a
-non-discriminator: both architectures have native 3-way compare and
-3-way branch, so a lex compare costs the same on each. Skipped.)
+## Corrected results
 
-## Results
-
-| workload       | BT-IS | SCALAR | ratio |
-|----------------|------:|-------:|------:|
-| W1 rotations   | 10    | 13     | 1.30× |
-| W2 voxel_count | 72    | 61     | 0.85× |
-| W4 cubeadd_loop| 15    | 72     | 4.80× |
+| workload       | BT-IS | SCALAR (word-width) | ratio |
+|----------------|------:|--------------------:|------:|
+| W1 rotations   | 10    | 14                  | 1.40× |
+| W2 voxel_count | 72    | 61                  | 0.85× |
+| W4 cubeadd_loop| 15    | 22                  | 1.47× |
 
 (`ratio` = SCALAR / BT-IS. Higher = BT-IS more efficient.)
 
 ## Interpretation
 
-### W1 — rotations: BT-IS 1.30× faster
+### W4 — cubeadd_loop: BT-IS 1.47× (not 4.8×)
 
-The win is small. Both architectures do 8 rotations; BT-IS uses
-8 `rot_*` instructions, SCALAR uses 8 `APPLY_PERM` instructions.
-The 3 BT-IS extras (loading the initial axis cube) plus the
-SCALAR setup overhead explain the gap. This workload is *not* a
-discriminator for the geometric-vs-scalar question.
+This is the corrected headline. With a fair baseline, BT-IS's
+`cube_add` advantage is **1.5×**, not 4.8×. The previous 4.8×
+figure came from a baseline that decomposed a word-add into
+six per-coord ops — a strawman.
 
-### W2 — voxel_count: BT-IS 0.85× (slower)
+The 1.5× advantage reflects:
+- BT-IS cube-add: 1 op.
+- SCALAR WADD: 1 op (the fair baseline).
+- BT-IS's advantage comes from the *operand location*: BT-IS
+  uses `C + mem[C]` (the cube IS the operand and the address
+  simultaneously), while SCALAR's WADD requires the operands
+  pre-loaded into cube registers. The setup cost (CGET × 3 +
+  MEM_LOAD) is what tips the balance.
 
-This is the surprising negative result. The BT-IS implementation
-uses 4 cube-adds via `cube_add`, but the surrounding setup
-(moving cubes between `C` and `D0`/`D1`, storing back to memory)
-requires many `MOV_CD` / `MOV_DC` / `STORE_D` ops. SCALAR
-operates directly on trit registers without the cube↔trit
-shuffling cost.
+### W1 — rotations: BT-IS 1.40×
 
-The architecture *does* have a cube-add primitive, but the
-*register file* is not wide enough: only 4 cube registers means
-binary operations like `a + b` need the operand at `mem[C]`
-and the other operand at `C` simultaneously, requiring the
-register-to-memory shuffle.
+Same conclusion as before: small win. Both architectures do
+8 rotations; BT-IS uses 8 `rot_*` instructions, SCALAR uses
+8 `APPLY_PERM` instructions. The gap is setup overhead.
 
-This finding is itself useful: it identifies a specific ISA
-weakness — insufficient cube registers — and motivates the
-"register file expansion" extension in `docs/RESULTS.md` Stage A.
+### W2 — voxel_count: BT-IS 0.85× (loss)
 
-### W4 — cubeadd_loop: BT-IS 4.80× faster
+Unchanged. The current 4-cube-register file is the bottleneck;
+the `cube_add` advantage cannot compensate for the operand
+shuffling required.
 
-The pure geometric win. Each cube-add is 1 BT-IS instruction
-versus 6 SCALAR instructions (`CADDX`, `CADDY`, `CADDZ`,
-`CARRY_X`, `CARRY_Y`, `CARRY_Z`). Across 10 iterations, BT-IS
-does 10 `cube_add`s + setup (15 total); SCALAR does 60 add/sub
-+ 12 setup (72 total). The 4.8× ratio matches the theoretical 6×
-ratio minus setup overhead.
+## Conclusion of Stage B (corrected)
 
-## Conclusion of Stage B
+**The central hypothesis H is not strongly supported.**
 
-**The central hypothesis H is partially supported.**
+- BT-IS's `cube_add` gives a ~1.5× instruction-count win over a
+  fair word-width SCALAR. This is real but modest.
+- BT-IS loses on workloads dominated by register-to-memory
+  shuffling (W2: 0.85×).
+- The architecture has *no* general-purpose advantage at the
+  current ISA.
 
-- BT-IS dominates on workloads that *consist of cube-adds* (W4:
-  4.8× speedup). This is the geometric payoff: the cube-add
-  primitive absorbs six per-coordinate SCALAR ops into one op.
-- BT-IS loses on workloads that *require shuttling cubes between
-  registers and memory* (W2: 0.85× slowdown). The current
-  register file is too narrow.
-- On workloads that don't exercise geometric primitives (W1),
-  BT-IS and SCALAR are roughly tied.
+The original verdict ("niche") should be revised to:
+**the architecture has a marginal advantage on cube-add-heavy
+workloads, conditional on register-file improvements.** Without
+those improvements, the architecture may not be worth pursuing.
 
-The hypothesis as stated ("BT-IS uses strictly fewer state-mutating
-instructions than SCALAR, attributable to geometric structure")
-holds *when* the workload is dominated by cube-arithmetic, and
-fails *when* it is dominated by register-to-memory traffic.
+## Action items
 
-For Stage F (decision), this is mixed evidence. The geometric
-advantage is real but conditional. Recommendation: **niche** —
-useful for cube-arithmetic-heavy workloads (3D Game-of-Life step,
-voxel neighborhood iteration, ternary neural-net primitives),
-but not a general-purpose improvement.
+1. **Implement the fused `LOAD_CR` / `STORE_CR` ops** (LOAD_C
+   with a rotor operand, applying R during the memory op).
+   This directly attacks the W2 shuffle cost.
+2. **Re-run W2** with the new ops.
+3. **Find a workload that tests the symmetry group itself**, not
+   just cube arithmetic. Candidates from the critique:
+   polycube/voxel canonicalization, O_h-equivariant convolution.
+4. **Re-run W4 with these new ops** to see if the 1.5× win
+   extends to a 2-3× win on a workload that *uses* the group
+   structure.
 
 ## How to reproduce
 
 ```bash
 cargo build
-python3 benchmarks/stage_b.py
+python3 benchmarks/stage_b_word.py
 ```
 
-The workload programs are in `programs/w*.btis` and
-`benchmarks/w*.py`.
+The word-width baseline is in `benchmarks/scalar_vm_word.py`.
+The per-workload programs are `programs/w*.btis` (BT-IS) and
+`benchmarks/w*_word_scalar.py` (SCALAR).
