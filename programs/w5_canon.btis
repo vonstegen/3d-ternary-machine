@@ -1,0 +1,392 @@
+; w5_canon.btis — W5: apply all 48 O_h permutations to (1,0,0).
+;
+; The inner loop of voxel canonicalization under O_h.
+; For each of 48 group elements, load the permutation into
+; R0 from identity, then apply R0 to C = (1, 0, 0) and emit.
+;
+; Mirror of benchmarks/w5_canon/w5_scalar.py. Both programs
+; emit 48 outputs covering the orbit of (1,0,0) under O_h,
+; which is exactly the 6 axial states {+/-X, +/-Y, +/-Z},
+; each appearing 8 times.
+;
+; stage_b_word.py asserts the BT-IS and SCALAR outputs
+; match before reporting an instruction-count ratio.
+
+; --- permutation I (factor length 0) ---
+load_r 0       ; R0 := identity
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rx90 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rx180 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_x_180_r 0   ; R0 := rot_x_180.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rx270 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_x_270_r 0   ; R0 := rot_x_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Ry90 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Ry180 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_y_180_r 0   ; R0 := rot_y_180.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Ry270 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_y_270_r 0   ; R0 := rot_y_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rz90 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rz180 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_z_180_r 0   ; R0 := rot_z_180.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rz270 (factor length 1) ---
+load_r 0       ; R0 := identity
+rot_z_270_r 0   ; R0 := rot_z_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rxy180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_180_r 0   ; R0 := rot_x_180.then(R0)
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rxmy180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_180_r 0   ; R0 := rot_x_180.then(R0)
+rot_z_270_r 0   ; R0 := rot_z_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rxz180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_180_r 0   ; R0 := rot_x_180.then(R0)
+rot_y_270_r 0   ; R0 := rot_y_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rxzm180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_180_r 0   ; R0 := rot_x_180.then(R0)
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Ryz180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_z_180_r 0   ; R0 := rot_z_180.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Ryzm180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_y_180_r 0   ; R0 := rot_y_180.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation R111_120 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation R111_240 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_270_r 0   ; R0 := rot_x_270.then(R0)
+rot_y_270_r 0   ; R0 := rot_y_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rm11_120 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_z_270_r 0   ; R0 := rot_z_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation Rm11_240 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_270_r 0   ; R0 := rot_x_270.then(R0)
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation R1m1_120 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_270_r 0   ; R0 := rot_x_270.then(R0)
+rot_z_270_r 0   ; R0 := rot_z_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation R1m1_240 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_y_270_r 0   ; R0 := rot_y_270.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation R11m_120 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_270_r 0   ; R0 := rot_x_270.then(R0)
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation R11m_240 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iI (factor length 1) ---
+load_r 0       ; R0 := identity
+neg_r 0   ; R0 := neg.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRx90 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+neg_r 0   ; R0 := neg.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRx180 (factor length 1) ---
+load_r 0       ; R0 := identity
+reflect_x_r 0   ; R0 := reflect_x.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRx270 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+reflect_x_r 0   ; R0 := reflect_x.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRy90 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+neg_r 0   ; R0 := neg.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRy180 (factor length 1) ---
+load_r 0       ; R0 := identity
+reflect_y_r 0   ; R0 := reflect_y.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRy270 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+reflect_y_r 0   ; R0 := reflect_y.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRz90 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+neg_r 0   ; R0 := neg.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRz180 (factor length 1) ---
+load_r 0       ; R0 := identity
+reflect_z_r 0   ; R0 := reflect_z.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRz270 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+reflect_z_r 0   ; R0 := reflect_z.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRxy180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+reflect_y_r 0   ; R0 := reflect_y.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRxmy180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+reflect_x_r 0   ; R0 := reflect_x.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRxz180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+reflect_x_r 0   ; R0 := reflect_x.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRxzm180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+reflect_z_r 0   ; R0 := reflect_z.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRyz180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+reflect_z_r 0   ; R0 := reflect_z.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRyzm180 (factor length 2) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+reflect_y_r 0   ; R0 := reflect_y.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iR111_120 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+neg_r 0   ; R0 := neg.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iR111_240 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+reflect_x_r 0   ; R0 := reflect_x.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRm11_120 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+reflect_z_r 0   ; R0 := reflect_z.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iRm11_240 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+reflect_z_r 0   ; R0 := reflect_z.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iR1m1_120 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+reflect_x_r 0   ; R0 := reflect_x.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iR1m1_240 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+reflect_y_r 0   ; R0 := reflect_y.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iR11m_120 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_z_90_r 0   ; R0 := rot_z_90.then(R0)
+reflect_y_r 0   ; R0 := reflect_y.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+; --- permutation iR11m_240 (factor length 3) ---
+load_r 0       ; R0 := identity
+rot_x_90_r 0   ; R0 := rot_x_90.then(R0)
+rot_y_90_r 0   ; R0 := rot_y_90.then(R0)
+neg_r 0   ; R0 := neg.then(R0)
+load_axis X    ; C := (1, 0, 0)
+apply_r 0      ; C := R0(C)
+outc           ; emit C
+
+halt
