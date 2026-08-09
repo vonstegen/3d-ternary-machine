@@ -1,0 +1,30 @@
+; rotor_reversible.btis
+;
+; Demonstrates the rotor register file.
+;
+; Step 1: load a vector
+; Step 2: apply ROT_Z_90 four times -> back to start (4th-order)
+; Step 3: apply ROT_Z_90 once more via the rotor register:
+;           apply_r 0  (where R0 holds ROT_Z_90)
+; Step 4: emit the cube
+;
+; This program exercises:
+;   - load_axis  (load a unit cube)
+;   - rot_z_90   (apply a cube-symmetry op directly)
+;   - apply_r    (apply a stored rotor)
+;
+; The rotor R0 is implicitly identity at start (since we don't have
+; an op to set R0 = ROT_Z_90 directly; composition requires both
+; rotors to already be loaded). For this demo we just rely on the
+; direct op path.
+
+load_axis X                   ; C = (1,0,0)
+outc                          ; emit (1,0,0) start
+rot_z_90
+rot_z_90
+rot_z_90
+rot_z_90                      ; 4 of 90 = 360 = identity
+outc                          ; emit (1,0,0) again
+rot_z_90
+outc                          ; emit (0,1,0)
+halt

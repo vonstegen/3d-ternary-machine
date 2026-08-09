@@ -1,0 +1,19 @@
+; A tiny BT-IS program.
+;
+; Demonstrates that the geometric primitives compose:
+;   - Load the +X axis
+;   - Rotate it 90 deg about +Z -> +Y
+;   - Rotate that 90 deg about +X -> +Z
+;   - Reflect through YZ plane -> -Z
+;   - Apply negation -> +Z
+;   - Output final cube
+;
+; A program is a trajectory through cube state space.
+
+load_axis X
+rot_z_90
+rot_x_90
+reflect_x
+neg
+outc
+halt

@@ -1,0 +1,53 @@
+; voxel_pattern.btis
+;
+; Demonstrates the cube-addressed memory (STORE_C, LOAD_C) and the
+; rotor register file.
+;
+; The 27-cube is a 3x3x3 voxel grid. We populate 5 cells with "alive"
+; markers (each stored as a cube), then re-read them through a fresh
+; traversal to confirm the memory is geometric: writing to a cell
+; affects only that cell, and reading it back gives the same cube.
+
+; Helper: each line "store_c" reads C as the address and stores
+; C there. We move through the cube by applying rotations to C,
+; then storing at the resulting cube address.
+
+loadc 1                       ; C = (1,1,1)  -- "alive" marker
+store_c                       ; mem[(1,1,1)] := (1,1,1)
+
+load_axis X                   ; C = (1,0,0)
+store_c                       ; mem[(1,0,0)] := (1,0,0)
+
+load_axis XI                  ; C = (-1,0,0)
+store_c                       ; mem[(-1,0,0)] := (-1,0,0)
+
+load_axis Y
+store_c                       ; mem[(0,1,0)] := (0,1,0)
+
+load_axis YI
+store_c                       ; mem[(0,-1,0)] := (0,-1,0)
+
+; Now read each cell back and emit. We use load_axis to put the
+; address in C, then load_c to fetch the value.
+
+load_axis X
+load_c
+outc                          ; emit mem[(1,0,0)]  -> expect (1,0,0)
+
+load_axis XI
+load_c
+outc                          ; expect (-1,0,0)
+
+load_axis Y
+load_c
+outc                          ; expect (0,1,0)
+
+load_axis YI
+load_c
+outc                          ; expect (0,-1,0)
+
+loadc 1
+load_c
+outc                          ; expect (1,1,1)
+
+halt

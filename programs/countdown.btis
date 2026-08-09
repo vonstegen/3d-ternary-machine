@@ -1,0 +1,14 @@
+; countdown.btis
+;
+; Counts down from +1 through 0 to -1, emitting each value as it passes.
+; Expected output: 1, 0, -1
+
+loadc 1
+label loop
+outi              ; emit current value
+cmp -1            ; F = sign(C.x - (-1))
+br_zero done      ; if C.x == -1, exit
+isub 1            ; C.x := C.x - 1 (saturating)
+jmp loop
+label done
+halt

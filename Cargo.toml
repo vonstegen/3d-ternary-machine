@@ -1,0 +1,33 @@
+[package]
+name = "btis"
+version = "0.1.0"
+edition = "2021"
+default-run = "btis"
+description = "Bi-Ternary / 3D-Ternary Instruction System: a machine architecture whose primitive state is a balanced-ternary 3-vector in {-1,0,+1}^3, with operations derived from cube geometry."
+license = "MIT OR Apache-2.0"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "btis"
+path = "src/main.rs"
+
+[[bin]]
+name = "btis_bench"
+path = "benchmarks/in_process.rs"
+
+[[bin]]
+name = "btis_pure_lut"
+path = "benchmarks/pure_lut.rs"
+
+[[bin]]
+name = "btis_dump_tables"
+path = "src/bin/dump_tables.rs"
+
+[profile.release]
+lto = true
+opt-level = 3
+
+[profile.dev]
+opt-level = 1

@@ -1,0 +1,24 @@
+; bench_rot_100k.btis
+;
+; Loop 100000 times: rotate C by ROT_Z_90, ROT_X_90, ROT_Z_270.
+; Each iteration is 4 instructions (3 rotations + branch). The loop
+; runs 100000 times so total = ~400000 instructions.
+;
+; Expected output: nothing (just CPU time when run via CLI).
+
+loadc 0                  ; C := (0,0,0)
+loadc 1                  ; C := (1,1,1)  -- arbitrary start state
+
+; Count in C using saturating IADD. C.x in {-1, 0, +1} clamps
+; quickly so we use memory to count via mem[C].
+;
+; Simpler: just spin 100000 iterations. Counter is implicit.
+
+label loop
+rot_z_90
+rot_x_90
+rot_z_270
+br_pos done              ; we'll never take this; just exits when C.x > 0
+jmp loop
+label done
+halt

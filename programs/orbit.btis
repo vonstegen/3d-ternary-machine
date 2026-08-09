@@ -1,0 +1,37 @@
+; orbit.btis
+;
+; Demonstrate that the octahedral group O acts transitively on the
+; 8 corner states of the cube. Start at corner (1,1,1), apply 12
+; distinct rotations, emit the visited cubes.
+;
+; Rotations listed: identity, ROT_X_90, ROT_X_180, ROT_X_270,
+;   ROT_Y_90, ROT_Y_180, ROT_Y_270, ROT_Z_90, ROT_Z_180, ROT_Z_270,
+;   reflect_y (a parity operation, included for completeness)
+;
+; Expected: 11 distinct cube emissions. The corner (1,1,1) has orbit
+; size 8 under O (its stabilizer has size 3), so 12 rotations can
+; visit at most 8 distinct cubes.
+
+loadc 1            ; (1,1,1)
+outc
+rot_x_90           ; (1,-1,1)
+outc
+rot_x_180          ; (1,1,-1)
+outc
+rot_x_270          ; (1,-1,-1)
+outc
+rot_y_90           ; (1,1,1)  (back to start)
+outc
+rot_y_180          ; (-1,1,-1)
+outc
+rot_y_270          ; (1,1,1)
+outc
+rot_z_90           ; (-1,1,1)
+outc
+rot_z_180          ; (-1,-1,1)
+outc
+rot_z_270          ; (1,-1,1)
+outc
+reflect_y          ; (1,-1,-1)
+outc
+halt

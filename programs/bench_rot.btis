@@ -1,0 +1,11 @@
+; bench_rot.btis -- one rotation cycle.
+;
+; One full 90-degree rotation cycle: 4 instructions.
+; Used by benchmarks/bench.sh to measure VM throughput.
+
+load_axis X
+rot_z_90
+rot_z_90
+rot_z_90
+rot_z_90
+halt
