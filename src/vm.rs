@@ -85,6 +85,15 @@ impl std::error::Error for VMError {}
 /// One reversible mutation: describes how to undo one step.
 #[derive(Debug, Clone)]
 enum Undo {
+    /// Snapshot of control-flow state at the start of a step.
+    /// Pushed at the start of every step so that `undo_all()`
+    /// can restore the VM to a fully-pre-run state, including
+    /// `IP`, `steps`, and `halted`.
+    BeginStep {
+        halted: bool,
+        ip: usize,
+        steps: usize,
+    },
     RestoreC(Cube),
     RestoreF(Cube),
     RestoreR(usize, Perm),
@@ -153,6 +162,16 @@ impl VM {
     }
 
     /// Undo every recorded step. Returns the number undone.
+    ///
+    /// After `undo_all`, the VM is restored to the pre-run
+    /// state, including `IP`, `steps`, and `halted`. The
+    /// `output` vector is intentionally *not* cleared (it is
+    /// a side-effect log; clearing it would hide prior runs).
+    ///
+    /// Note: this is a *complete* revert, not the older
+    /// "data-only" restore. To re-run a program after
+    /// `undo_all`, just call `run()` again; the VM starts
+    /// at `IP=0` with `steps=0` and `halted=false`.
     pub fn undo_all(&mut self) -> usize {
         let n = self.undo_log.len();
         while let Some(u) = self.undo_log.pop() {
@@ -163,10 +182,15 @@ impl VM {
 
     fn apply_undo(&mut self, u: Undo) {
         match u {
+            Undo::BeginStep { halted, ip, steps } => {
+                self.halted = halted;
+                self.IP = ip;
+                self.steps = steps;
+            }
             Undo::RestoreC(c)    => self.C = c,
             Undo::RestoreF(f)    => self.F = f,
-            Undo::RestoreR(i, p) => self.R[i] = p,
             Undo::RestoreD(i, c) => self.D[i] = c,
+            Undo::RestoreR(i, p) => self.R[i] = p,
             Undo::MemInsert { addr, prev } => match prev {
                 Some(p) => { self.mem.insert(addr, p); }
                 None    => { self.mem.remove(&addr); }
@@ -181,6 +205,14 @@ impl VM {
         if self.steps >= self.max_steps {
             return Err(VMError::StepLimit(self.max_steps));
         }
+        // Record pre-step control state so undo_all() can
+        // restore IP, steps, and halted.
+        self.push_undo(Undo::BeginStep {
+            halted: self.halted,
+            ip: self.IP,
+            steps: self.steps,
+        });
+        self.steps += 1;
         let instr = self.program[self.IP].clone();
         if self.trace_enabled {
             self.trace.push(TraceStep {
@@ -191,7 +223,6 @@ impl VM {
                 F: self.F,
             });
         }
-        self.steps += 1;
         let mut next_ip = self.IP + 1;
         self.exec(instr, &mut next_ip)?;
         self.IP = next_ip;
@@ -680,9 +711,41 @@ mod tests {
         vm.run().unwrap();
         assert_ne!(vm.C, snap.C);
         let n_undo = vm.undo_all();
-        assert_eq!(n_undo, 6, "6 instructions, 6 undo entries");
+        // 6 instructions, each pushes 1 BeginStep + 1-2 data entries
+        // (the data mutation can be absent for ops like NOP or rotations
+        // that touch R, not C). For this program, the 6 ops push
+        assert_eq!(n_undo, 12, "6 BeginStep + 6 data-mutation undo entries");
         assert_eq!(vm.C, snap.C, "C must be restored");
         assert!(vm.mem.is_empty(), "STORE undone");
+        // Verify the new behavior: IP, steps, halted are all restored.
+        assert_eq!(vm.IP, snap.IP, "IP must be restored to 0");
+        assert_eq!(vm.steps, snap.steps, "steps must be restored to 0");
+    }
+
+    #[test]
+    fn undo_all_allows_rerun() {
+        // After undo_all, run() should restart from IP=0 with
+        // steps=0 and halted=false, producing the same output
+        // as the first run.
+        let mut vm = prog(vec![
+            Instr { opcode: opcodes::LOADC, arg: 1, target: 0 },
+            Instr { opcode: opcodes::OUTV,  arg: 0, target: 0 },
+            Instr { opcode: opcodes::HALT,   arg: 0, target: 0 },
+        ]);
+        vm.run().unwrap();
+        assert_eq!(vm.output, vec![Emit::Cube(Cube::new(1, 1, 1))]);
+        // undo_all() to make run() restart from IP=0.
+        let n = vm.undo_all();
+        assert!(n > 0);
+        assert_eq!(vm.IP, 0, "IP restored to 0");
+        assert_eq!(vm.steps, 0, "steps restored to 0");
+        assert!(!vm.halted, "halted restored to false");
+        // Re-run: same output, but the log accumulates.
+        vm.run().unwrap();
+        assert_eq!(vm.output, vec![
+            Emit::Cube(Cube::new(1, 1, 1)),
+            Emit::Cube(Cube::new(1, 1, 1)),
+        ]);
     }
 
     #[test]
