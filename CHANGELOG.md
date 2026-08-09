@@ -64,4 +64,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - ISA is small and intentionally so; missing: floating-point ops,
   indirect memory addressing beyond `STORE_C`/`LOAD_C`, multi-word
   state (the register file has only one `C` cube; multi-word state
-  is via memory).
+
+## [0.2.0-niche] — 2026-08-08
+
+### Added (Stages A-F)
+
+- **Data registers D0..D3** (cubes), with `MOV_CD`, `MOV_DC`,
+  `STORE_D`, `LOAD_D` ops. Necessary to hold two cubes
+  simultaneously for binary operations.
+- **Cube arithmetic**: `CYCLE_X/Y/Z` (cyclic per-coord, no
+  saturation), `CUBE_ADD` (full 27-state addition with carry
+  through x, y, z).
+- **Stage A program**: `fibonacci.btis` computing F(0..9) mod 27
+  using cube-additive Fibonacci in Z_3^3, cross-checked against
+  `benchmarks/cube_arith.py`.
+- **Stage B programs**: `w1_rotations.btis`, `w2_voxel_count.btis`,
+  `w4_cubeadd.btis`, with SCALAR equivalents and a benchmark
+  driver.
+- **Stage C harness**: `benchmarks/stage_c.py` runs an
+  in-process reversibility demo (`examples/reversibility_demo.rs`)
+  and counts branch ops across existing programs.
+- **Stage D hardware model**: `hardware/btis_core.v`, a behavioral
+  Verilog model of the BT-IS core with area estimates.
+- **Documentation**: `docs/turing_completeness.md`,
+  `docs/STAGE_B_RESULTS.md`, `docs/STAGE_C_RESULTS.md`,
+  `docs/STAGE_D_RESULTS.md`, `docs/STAGE_E_RESULTS.md`,
+  `docs/RESULTS.md`, `VERDICT.md`.
+
+### Results
+
+- **Stage B** (instruction-count vs SCALAR): BT-IS wins on cube-add
+  workload (W4: 4.8x), ties on rotations (W1: 1.3x), loses on
+  voxel count (W2: 0.85x — register-file too narrow).
+- **Stage C**: reversibility automatic and constant-time per
+  step; 3-way branching present in both architectures so not a
+  discriminator.
+- **Stage D**: estimated ~3000 LUTs + 9 BRAMs on a low-cost FPGA,
+  ~1.5x the SCALAR baseline's area (estimates only).
+
+### Verdict
+
+**Niche.** The architecture has real, measurable geometric
+advantages on cube-arithmetic-heavy workloads (Stage B W4
+demonstrates a 4.8x instruction-count reduction) but loses on
+workloads dominated by register-to-memory shuffling (Stage B W2).
+Recommendations: continue development in a narrowed scope
+(cube-arithmetic workloads); fix the register-file issue by
+adding D4..D7; re-decide at v0.3.0. Full rationale in
+`VERDICT.md`.

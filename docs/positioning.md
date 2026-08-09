@@ -126,6 +126,15 @@ instructions per geometric op" but "the cube *is* the operand": data,
 instructions, addresses, and flags are all cubes. This uniformity is
 what enables reversibility and three-way branching natively.
 
+## 6.1 Verdict (Stages A-F)
+
+After completing the roadmap stages A through F, the architecture
+is classified as **niche**: genuine geometric advantages on
+cube-arithmetic-heavy workloads (Stage B W4: 4.8x instruction-count
+reduction), but a loss on workloads dominated by register-to-memory
+shuffling (Stage B W2: 0.85x). The full verdict is in
+VERDICT.md and the consolidated results in docs/RESULTS.md.
+
 ## 7. Open problems
 implements the `Cl(3)` rotors. The prototype is mathematically
 consistent with the BT-IS cube (rotors of 90° about axes correspond
